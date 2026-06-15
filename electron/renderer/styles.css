@@ -5937,12 +5937,12 @@ body.theme-light .lib-brain-panel {
 #libSplit.library-loading::before {
   content: "";
   position: absolute;
-  top: 78px;
-  right: 120px;
+  top: -46px;
+  right: 172px;
   z-index: 18;
-  width: 34px;
-  height: 34px;
-  border: 4px solid color-mix(in srgb, var(--modern-gold, #e2bd6b) 20%, var(--modern-hairline, var(--border)));
+  width: 18px;
+  height: 18px;
+  border: 3px solid color-mix(in srgb, var(--modern-gold, #e2bd6b) 20%, var(--modern-hairline, var(--border)));
   border-top-color: color-mix(in srgb, var(--modern-jade, #24d2bd) 78%, #7c8cff);
   border-radius: 999px;
   animation: spin 0.86s linear infinite;
@@ -5952,23 +5952,25 @@ body.theme-light .lib-brain-panel {
 #libSplit.library-loading::after {
   content: attr(data-loading-message);
   position: absolute;
-  top: 0;
+  top: -56px;
   right: 0;
   z-index: 17;
   display: flex;
-  width: min(390px, 32%);
-  min-width: 280px;
-  min-height: 190px;
+  width: auto;
+  min-width: 210px;
+  min-height: 38px;
   align-items: center;
   justify-content: center;
-  padding-top: 58px;
+  padding: 0 14px 0 42px;
   border: 1px dashed color-mix(in srgb, var(--modern-hairline, var(--border)) 82%, var(--modern-jade, #24d2bd) 18%);
-  border-radius: 14px;
+  border-radius: 999px;
   color: var(--muted);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--modern-jade, #24d2bd) 7%, transparent), transparent 62%),
     color-mix(in srgb, var(--modern-panel-2, var(--surface)) 86%, transparent);
-  box-shadow: 0 20px 46px -36px rgba(0, 0, 0, 0.72);
+  box-shadow: 0 16px 30px -24px rgba(0, 0, 0, 0.72);
+  font-size: 0.76rem;
+  font-weight: 800;
   pointer-events: none;
 }
 

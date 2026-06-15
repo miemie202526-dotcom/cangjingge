@@ -29,6 +29,10 @@ let lsMirror = null;
 
 export const STORE_CHANGED_EVENT = "acsp-store-changed";
 
+/** @type {Promise<number> | null} */
+let librarySyncPromise = null;
+let lastLibrarySyncAt = 0;
+
 /** @returns {"indexedDB"|"localStorage"|"uninitialized"} */
 export function getStorageBackend() {
   if (db) return "indexedDB";
@@ -218,45 +222,59 @@ export async function initStore() {
 
 /**
  * @param {{ libraryList: () => Promise<any[]>; libraryGetContent: (p: any) => Promise<any> }} ipc
+ * @param {{ force?: boolean, minIntervalMs?: number }} [opts]
  */
-export async function syncLibraryIntoIdb(ipc) {
-  if (!ipc?.libraryList || !ipc?.libraryGetContent) return;
-  let lib = [];
-  try {
-    lib = await ipc.libraryList();
-  } catch {
-    return;
-  }
-  for (let i = 0; i < lib.length; i++) {
-    const rec = lib[i];
-    if (!rec?.id) continue;
+export async function syncLibraryIntoIdb(ipc, opts = {}) {
+  if (!ipc?.libraryList || !ipc?.libraryGetContent) return 0;
+  if (librarySyncPromise) return librarySyncPromise;
+  const now = Date.now();
+  const minInterval = Number(opts.minIntervalMs ?? 15_000);
+  if (!opts.force && lastLibrarySyncAt && now - lastLibrarySyncAt < minInterval) return 0;
+  lastLibrarySyncAt = now;
+  librarySyncPromise = (async () => {
+    let changed = 0;
+    let lib = [];
     try {
-      const existing = await getFile(rec.id);
-      const hasBody = existing && typeof existing.content === "string" && existing.content.length > 0;
-      if (hasBody) continue;
-      const { content, record } = await ipc.libraryGetContent({ id: rec.id, apiKey: "" });
-      const merged = {
-        ...rec,
-        ...(record && typeof record === "object" ? record : {}),
-        id: rec.id,
-        content: String(content ?? ""),
-        markdownPreview: String(rec.markdownPreview || record?.markdownPreview || ""),
-      };
-      await putFile(merged, { silent: true });
-    } catch (e) {
-      console.warn("[idbStore] sync skip", rec.id, e);
+      lib = await ipc.libraryList();
+    } catch {
+      return 0;
     }
-    if (i % 2 === 1) {
-      await new Promise((r) => setTimeout(r, 0));
+    for (let i = 0; i < lib.length; i++) {
+      const rec = lib[i];
+      if (!rec?.id) continue;
+      try {
+        const existing = await getFile(rec.id);
+        const hasBody = existing && typeof existing.content === "string" && existing.content.length > 0;
+        if (hasBody) continue;
+        const { content, record } = await ipc.libraryGetContent({ id: rec.id, apiKey: "" });
+        const merged = {
+          ...rec,
+          ...(record && typeof record === "object" ? record : {}),
+          id: rec.id,
+          content: String(content ?? ""),
+          markdownPreview: String(rec.markdownPreview || record?.markdownPreview || ""),
+        };
+        await putFile(merged, { silent: true });
+        changed += 1;
+      } catch (e) {
+        console.warn("[idbStore] sync skip", rec.id, e);
+      }
+      if (i % 2 === 1) {
+        await new Promise((r) => setTimeout(r, 0));
+      }
     }
-  }
-  notifyStoreChanged();
+    if (changed) notifyStoreChanged();
+    return changed;
+  })().finally(() => {
+    librarySyncPromise = null;
+  });
+  return librarySyncPromise;
 }
 
 /** 不阻塞首屏：在浏览器空闲或短延迟后从主进程库拉取正文补全 IndexedDB */
 function scheduleBackgroundLibrarySync(ipc) {
   const run = () => {
-    syncLibraryIntoIdb(ipc).catch((e) => console.warn("[idbStore] background library sync", e));
+    syncLibraryIntoIdb(ipc, { minIntervalMs: 30_000 }).catch((e) => console.warn("[idbStore] background library sync", e));
   };
   if (typeof requestIdleCallback === "function") {
     requestIdleCallback(run, { timeout: 3000 });

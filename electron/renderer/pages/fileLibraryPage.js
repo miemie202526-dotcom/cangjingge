@@ -564,6 +564,10 @@ export function mountFileLibrary(root, ctx) {
   let activeSearchQuery = "";
   let searchDebounceTimer = 0;
   let mainSearchDebounceTimer = 0;
+  let reloadTimer = 0;
+  let reloadInFlight = null;
+  let reloadAgainAfterCurrent = false;
+  let visibleLoading = false;
   let lastRenderSerial = 0;
   let reloadSerial = 0;
   let listPageIndex = 0;
@@ -655,7 +659,10 @@ export function mountFileLibrary(root, ctx) {
 
   function setLibraryLoading(active, message = "") {
     if (!splitWrap) return;
-    splitWrap.classList.toggle("library-loading", Boolean(active));
+    const next = Boolean(active);
+    if (visibleLoading === next && (!next || splitWrap.getAttribute("data-loading-message") === message)) return;
+    visibleLoading = next;
+    splitWrap.classList.toggle("library-loading", next);
     if (active) {
       splitWrap.setAttribute("data-loading-message", message || p.loadingLabel || "加载文件库…");
       updateSearchStatus(message || "正在加载文件库…");
@@ -2294,7 +2301,11 @@ export function mountFileLibrary(root, ctx) {
     if (!ctx.ipc?.libraryList || !ctx.ipc?.libraryGetContent) return;
     updateSearchStatus("本地库为空，正在后台检查磁盘资料…");
     try {
-      await withTimeout(idb.syncLibraryIntoIdb(ctx.ipc), LIBRARY_SYNC_TIMEOUT_MS, "同步磁盘资料");
+      const changed = await withTimeout(
+        idb.syncLibraryIntoIdb(ctx.ipc, { force: true }),
+        LIBRARY_SYNC_TIMEOUT_MS,
+        "同步磁盘资料"
+      );
       if (parentSerial !== reloadSerial) return;
       const fresh = await withTimeout(idb.listFiles(), LIBRARY_READ_TIMEOUT_MS, "读取同步结果");
       if (parentSerial !== reloadSerial) return;
@@ -2302,7 +2313,7 @@ export function mountFileLibrary(root, ctx) {
         items = fresh;
         buildSearchIndex();
         renderAll();
-        ctx.toast(`已同步 ${fresh.length} 个文件`);
+        if (changed) ctx.toast(`已同步 ${fresh.length} 个文件`);
       } else {
         updateSearchStatus("文件库为空，可上传或粘贴聊天记录");
       }
@@ -2313,28 +2324,49 @@ export function mountFileLibrary(root, ctx) {
     }
   }
 
+  function scheduleReload() {
+    if (reloadTimer) return;
+    reloadTimer = window.setTimeout(() => {
+      reloadTimer = 0;
+      void reload();
+    }, 120);
+  }
+
   async function reload() {
-    const serial = ++reloadSerial;
-    setLibraryLoading(true, "读取本地文件库…");
-    loadFailed = false;
-    try {
-      items = await withTimeout(idb.listFiles(), LIBRARY_READ_TIMEOUT_MS, "读取本地文件库");
-      if (serial !== reloadSerial) return;
-      buildSearchIndex();
-      setLibraryLoading(false);
-      renderAll();
-      if (!items.length) void hydrateDiskLibrary(serial);
-    } catch (e) {
-      if (serial !== reloadSerial) return;
-      loadFailed = true;
-      items = [];
-      ctx.toast(
-        `${m?.messages?.libLoadFailed || ""} ${m?.messages?.libLoadRetry || ""}`.trim() || e?.message || "",
-        true
-      );
-      setLibraryLoading(false);
-      renderAll();
+    if (reloadInFlight) {
+      reloadAgainAfterCurrent = true;
+      return reloadInFlight;
     }
+    const serial = ++reloadSerial;
+    reloadInFlight = (async () => {
+      setLibraryLoading(true, "读取本地文件库…");
+      loadFailed = false;
+      try {
+        items = await withTimeout(idb.listFiles(), LIBRARY_READ_TIMEOUT_MS, "读取本地文件库");
+        if (serial !== reloadSerial) return;
+        buildSearchIndex();
+        renderAll();
+        if (!items.length) void hydrateDiskLibrary(serial);
+      } catch (e) {
+        if (serial !== reloadSerial) return;
+        loadFailed = true;
+        items = [];
+        ctx.toast(
+          `${m?.messages?.libLoadFailed || ""} ${m?.messages?.libLoadRetry || ""}`.trim() || e?.message || "",
+          true
+        );
+        renderAll();
+      } finally {
+        if (serial === reloadSerial) setLibraryLoading(false);
+      }
+    })().finally(() => {
+      reloadInFlight = null;
+      if (reloadAgainAfterCurrent) {
+        reloadAgainAfterCurrent = false;
+        scheduleReload();
+      }
+    });
+    return reloadInFlight;
   }
 
   async function handleFiles(fileList) {
@@ -2931,7 +2963,7 @@ export function mountFileLibrary(root, ctx) {
   root.querySelector("#libReaderPrev").addEventListener("click", () => jumpReader(-1));
   root.querySelector("#libReaderNext").addEventListener("click", () => jumpReader(1));
 
-  const onStore = () => reload();
+  const onStore = () => scheduleReload();
   window.addEventListener(idb.STORE_CHANGED_EVENT, onStore);
   window.addEventListener("ai-pro-library-changed", onStore);
   reload().then(() => {
@@ -2967,6 +2999,7 @@ export function mountFileLibrary(root, ctx) {
     destroy() {
       clearTimeout(searchDebounceTimer);
       clearTimeout(mainSearchDebounceTimer);
+      clearTimeout(reloadTimer);
       void persistReadCursor();
       // 离开页面时立即提交还在倒计时的删除（落盘删除）
       try { undoMgr.clear(); } catch { /* ignore */ }
