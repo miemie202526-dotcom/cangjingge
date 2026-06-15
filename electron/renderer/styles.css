@@ -5805,13 +5805,61 @@ body.theme-light .lib-brain-panel {
 }
 
 #libSplit {
+  position: relative;
   grid-template-columns: minmax(760px, 1fr) minmax(320px, 0.34fr);
   gap: 12px;
+  align-items: start;
+  overflow-anchor: none;
 }
 
 #libTableWrap {
+  min-height: min(420px, calc(100vh - 300px));
   max-height: calc(100vh - 250px);
   overflow: auto;
+  overflow-anchor: none;
+}
+
+#libEmpty {
+  min-height: 220px;
+  overflow-anchor: none;
+}
+
+#libSplit.library-loading::before {
+  content: "";
+  position: absolute;
+  top: 92px;
+  right: 152px;
+  z-index: 18;
+  width: 34px;
+  height: 34px;
+  border: 4px solid color-mix(in srgb, var(--modern-gold, #e2bd6b) 20%, var(--modern-hairline, var(--border)));
+  border-top-color: color-mix(in srgb, var(--modern-jade, #24d2bd) 78%, #7c8cff);
+  border-radius: 999px;
+  animation: spin 0.86s linear infinite;
+  pointer-events: none;
+}
+
+#libSplit.library-loading::after {
+  content: attr(data-loading-message);
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 17;
+  display: flex;
+  width: min(390px, 32%);
+  min-width: 280px;
+  min-height: 190px;
+  align-items: center;
+  justify-content: center;
+  padding-top: 58px;
+  border: 1px dashed color-mix(in srgb, var(--modern-hairline, var(--border)) 82%, var(--modern-jade, #24d2bd) 18%);
+  border-radius: 14px;
+  color: var(--muted);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--modern-jade, #24d2bd) 7%, transparent), transparent 62%),
+    color-mix(in srgb, var(--modern-panel-2, var(--surface)) 86%, transparent);
+  box-shadow: 0 20px 46px -36px rgba(0, 0, 0, 0.72);
+  pointer-events: none;
 }
 
 #libTable {

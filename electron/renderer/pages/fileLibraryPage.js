@@ -549,6 +549,7 @@ export function mountFileLibrary(root, ctx) {
   let searchDebounceTimer = 0;
   let mainSearchDebounceTimer = 0;
   let lastRenderSerial = 0;
+  let reloadSerial = 0;
   let listPageIndex = 0;
   /** @type {Map<string, { hay: string, title: string, preview: string }>} */
   let searchIndex = new Map();
@@ -634,6 +635,16 @@ export function mountFileLibrary(root, ctx) {
   function updateSearchStatus(text) {
     if (!searchStatus) return;
     searchStatus.textContent = text || "输入关键词搜索";
+  }
+
+  function setLibraryLoading(active, message = "") {
+    if (!splitWrap) return;
+    splitWrap.classList.toggle("library-loading", Boolean(active));
+    if (active) {
+      splitWrap.setAttribute("data-loading-message", message || p.loadingLabel || "加载文件库…");
+    } else {
+      splitWrap.removeAttribute("data-loading-message");
+    }
   }
 
   function keywordHits(text, q) {
@@ -2239,8 +2250,8 @@ export function mountFileLibrary(root, ctx) {
   }
 
   async function reload() {
-    const wrap = root.querySelector(".split-2") || root;
-    const end = loadingState(wrap, p.loadingLabel || "");
+    const serial = ++reloadSerial;
+    setLibraryLoading(true, p.loadingLabel || "加载文件库…");
     loadFailed = false;
     try {
       items = await idb.listFiles();
@@ -2248,6 +2259,7 @@ export function mountFileLibrary(root, ctx) {
       items = await idb.listFiles();
       buildSearchIndex();
     } catch (e) {
+      if (serial !== reloadSerial) return;
       loadFailed = true;
       items = [];
       ctx.toast(
@@ -2255,7 +2267,8 @@ export function mountFileLibrary(root, ctx) {
         true
       );
     } finally {
-      end();
+      if (serial !== reloadSerial) return;
+      setLibraryLoading(false);
       renderAll();
     }
   }
