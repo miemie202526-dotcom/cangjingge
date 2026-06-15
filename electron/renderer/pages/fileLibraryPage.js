@@ -96,10 +96,16 @@ export function mountFileLibrary(root, ctx) {
 
   root.appendChild(
     el(`
-    <div class="page-head">
-      <div>
+    <div class="page-head library-page-head">
+      <div class="library-title-block">
         <h1 class="page-title">${p.title || ""}</h1>
-        <p class="page-sub">${p.subtitle || ""}</p>
+        <p class="page-sub">集中保存、搜索、阅读所有文件和聊天记录。</p>
+      </div>
+      <div class="library-vault-stats library-vault-stats--inline" id="libVaultStats">
+        <span><b>0</b> 全部文件</span>
+        <span><b>0</b> 当前结果</span>
+        <span><b>0</b> 已选择</span>
+        <span><b>0</b> 收藏</span>
       </div>
       <div class="row">
         <button type="button" class="btn btn-primary btn-sm" id="libUpload">${p.uploadBtn || ""}</button>
@@ -108,18 +114,6 @@ export function mountFileLibrary(root, ctx) {
         <input type="file" id="libFileInput" multiple style="display:none" />
       </div>
     </div>
-    <section class="library-vault-bar library-vault-bar--compact">
-      <div>
-        <div class="library-vault-kicker">资料库总览</div>
-        <h2>集中管理所有文件、聊天记录和资料</h2>
-      </div>
-      <div class="library-vault-stats" id="libVaultStats">
-        <span><b>0</b> 全部文件</span>
-        <span><b>0</b> 当前结果</span>
-        <span><b>0</b> 已选择</span>
-        <span><b>0</b> 收藏</span>
-      </div>
-    </section>
     <details class="library-tools-drawer library-tools-drawer--compact" id="libToolsDrawer">
       <summary>
         <span>
@@ -425,6 +419,15 @@ export function mountFileLibrary(root, ctx) {
         <h3 style="margin-top:12px;font-size:0.95rem">${p.mdPreview || ""}</h3>
         <div id="libMdPreview" class="preview-box muted" style="font-size:0.82rem;max-height:220px;overflow:auto"></div>
       </div>
+      <div class="card lib-detail-placeholder" id="libDetailEmpty">
+        <div class="lib-detail-empty-kicker">文件详情</div>
+        <h3>选择左侧文件</h3>
+        <p class="muted">单击文件查看详情、标签和智能判断；双击直接进入阅读器。</p>
+        <div class="lib-detail-empty-actions">
+          <button type="button" class="btn btn-primary btn-sm" id="libEmptyUpload">上传文件</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="libEmptyChat">粘贴聊天记录</button>
+        </div>
+      </div>
     </div>
   `)
   );
@@ -439,6 +442,7 @@ export function mountFileLibrary(root, ctx) {
   const vaultStats = root.querySelector("#libVaultStats");
   const emptyHost = root.querySelector("#libEmpty");
   const detail = root.querySelector("#libDetail");
+  const detailEmpty = root.querySelector("#libDetailEmpty");
   const previewArea = root.querySelector("#libPreviewArea");
   const mdPreview = root.querySelector("#libMdPreview");
   const keywordInsight = root.querySelector("#libKeywordInsight");
@@ -1311,6 +1315,7 @@ export function mountFileLibrary(root, ctx) {
   function showDetailLocal(rec) {
     if (!rec) return;
     detail.style.display = "block";
+    if (detailEmpty) detailEmpty.style.display = "none";
     const auto = inferAutoTags(rec).join("、") || "—";
     root.querySelector("#libDetailMeta").textContent = `${rec.fileName}\n扩展名 ${extOf(rec) || "—"} · 字符 ${rec.charCount ?? "—"} · 行 ${rec.lineCount ?? "—"}\n分类 ${rec.category || "未分类"} · 优先级 ${rec.priority || "未设置"}\n${p.tagsAuto || ""}：${auto}`;
     root.querySelector("#libSummary").textContent = `${p.summaryPrefix || ""}${summaryLine(rec)}`;
@@ -1388,6 +1393,20 @@ export function mountFileLibrary(root, ctx) {
       }`;
     } else {
       keywordInsight.textContent = "提示：在上方搜索框输入关键词后，这里会显示命中次数与上下文片段。";
+    }
+  }
+
+  function showDetailEmpty(kind = "idle") {
+    if (detail) detail.style.display = "none";
+    if (!detailEmpty) return;
+    detailEmpty.style.display = "block";
+    const title = detailEmpty.querySelector("h3");
+    const desc = detailEmpty.querySelector("p");
+    if (title) title.textContent = kind === "empty" ? "还没有文件" : "选择左侧文件";
+    if (desc) {
+      desc.textContent = kind === "empty"
+        ? "上传资料或粘贴聊天记录后，这里会显示文件详情、标签、阅读入口和智能判断。"
+        : "单击文件查看详情、标签和智能判断；双击直接进入阅读器。";
     }
   }
 
@@ -2007,7 +2026,7 @@ export function mountFileLibrary(root, ctx) {
     if (loadFailed) {
       emptyHost.innerHTML = "";
       emptyState(emptyHost, p.loadErrorTitle || "", p.loadErrorHint || "");
-      detail.style.display = "none";
+      showDetailEmpty("empty");
       tbody.innerHTML = "";
       cardsHost.innerHTML = "";
       renderLibraryMap([]);
@@ -2039,7 +2058,7 @@ export function mountFileLibrary(root, ctx) {
         items.length ? p.emptyFilteredTitle || "" : p.emptyAllTitle || "",
         items.length ? p.emptyFilteredHint || "" : p.emptyAllHint || ""
       );
-      detail.style.display = "none";
+      showDetailEmpty(items.length ? "idle" : "empty");
       tbody.innerHTML = "";
       cardsHost.innerHTML = "";
       if (inMainReader) toggleMainReader(false);
@@ -2073,9 +2092,11 @@ export function mountFileLibrary(root, ctx) {
       }
       else {
         selectedId = null;
-        detail.style.display = "none";
+        showDetailEmpty("idle");
         if (inMainReader) toggleMainReader(false);
       }
+    } else {
+      showDetailEmpty("idle");
     }
     refreshLibHitNav();
     if (serial === lastRenderSerial) {
@@ -2343,6 +2364,8 @@ export function mountFileLibrary(root, ctx) {
   }
 
   root.querySelector("#libUpload").addEventListener("click", () => fileInput.click());
+  root.querySelector("#libEmptyUpload")?.addEventListener("click", () => fileInput.click());
+  root.querySelector("#libEmptyChat")?.addEventListener("click", () => toggleChatPanel(true));
   root.querySelector("#libToggleTools")?.addEventListener("click", () => {
     if (!toolsDrawer) return;
     toolsDrawer.open = !toolsDrawer.open;

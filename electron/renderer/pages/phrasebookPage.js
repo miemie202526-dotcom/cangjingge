@@ -376,8 +376,49 @@ export async function mountPhrasebook(root, ctx) {
     return normalized;
   }
 
+  function askTextDialog({ title, value = "", placeholder = "", okText = "保存" }) {
+    return new Promise((resolve) => {
+      const dlg = el(`
+        <div class="phDialogBackdrop" role="dialog" aria-modal="true">
+          <div class="phDialog">
+            <h3>${escHtml(title || "输入内容")}</h3>
+            <input class="inp" id="phDialogInput" value="${escAttr(value)}" placeholder="${escAttr(placeholder)}" />
+            <div class="phDialogActions">
+              <button type="button" class="btn btn-ghost btn-sm" id="phDialogCancel">取消</button>
+              <button type="button" class="btn btn-primary btn-sm" id="phDialogOk">${escHtml(okText)}</button>
+            </div>
+          </div>
+        </div>
+      `);
+      root.appendChild(dlg);
+      const input = dlg.querySelector("#phDialogInput");
+      const close = (result) => {
+        dlg.remove();
+        resolve(result);
+      };
+      dlg.querySelector("#phDialogCancel")?.addEventListener("click", () => close(null));
+      dlg.querySelector("#phDialogOk")?.addEventListener("click", () => close(String(input.value || "")));
+      dlg.addEventListener("click", (e) => {
+        if (e.target === dlg) close(null);
+      });
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") close(String(input.value || ""));
+        if (e.key === "Escape") close(null);
+      });
+      window.setTimeout(() => {
+        input.focus();
+        input.select();
+      }, 0);
+    });
+  }
+
   async function createProject(prefill = "") {
-    const raw = window.prompt("新项目名称：\n例如：客户A话术 / 黄金交易 / 美国经济话题", prefill);
+    const raw = await askTextDialog({
+      title: "新建金句项目",
+      value: prefill,
+      placeholder: "例如：客户A话术 / 黄金交易 / 美国经济话题",
+      okText: "创建",
+    });
     if (raw == null) return;
     const name = normalizeCategoryName(raw);
     if (!name) {
@@ -1452,7 +1493,12 @@ export async function mountPhrasebook(root, ctx) {
 
   async function renameCategory(oldName) {
     if (!oldName || oldName === "__all__") return;
-    const next = window.prompt(`把分类「${oldName}」重命名为：`, oldName);
+    const next = await askTextDialog({
+      title: `重命名项目「${oldName}」`,
+      value: oldName,
+      placeholder: "输入新的项目名称",
+      okText: "保存名称",
+    });
     if (next == null) return;
     const newName = normalizeCategoryName(next);
     if (!newName || newName === oldName) return;
