@@ -1,0 +1,103 @@
+{
+  "name": "ai-content-studio",
+  "version": "1.1.1",
+  "description": "AI Content Studio Pro — Electron 桌面端",
+  "main": "electron/main.js",
+  "author": "local",
+  "license": "MIT",
+  "scripts": {
+    "version:patch": "npm version patch --no-git-tag-version",
+    "version:upgrade": "node scripts/bump-version.js",
+    "check": "node scripts/health-check.js",
+    "check:syntax": "node --check electron/main.js && node --check openaiStructuredClient.js",
+    "start": "electron .",
+    "dist": "electron-builder --win nsis",
+    "dist:dir": "electron-builder --win dir",
+    "dist:mac": "electron-builder --mac dmg zip",
+    "dist:mac:dir": "electron-builder --mac dir",
+    "desktop:mac": "bash scripts/package-mac-desktop.sh --bump",
+    "desktop:mac:noBump": "bash scripts/package-mac-desktop.sh",
+    "desktop:windows": "bash scripts/package-windows-usb.sh --bump",
+    "desktop:windows:noBump": "bash scripts/package-windows-usb.sh",
+    "install:desktop": "powershell -ExecutionPolicy Bypass -File scripts/install-unpacked-with-shortcut.ps1",
+    "sync:release": "powershell -ExecutionPolicy Bypass -File scripts/sync-release-to-install.ps1",
+    "refresh:desktop": "npm run dist:dir && npm run sync:release",
+    "desktop:release": "powershell -ExecutionPolicy Bypass -NoProfile -File scripts/release-desktop-full.ps1",
+    "desktop:release:noBump": "powershell -ExecutionPolicy Bypass -NoProfile -File scripts/release-desktop-full.ps1 -NoBump",
+    "desktop:release:quick": "powershell -ExecutionPolicy Bypass -NoProfile -File scripts/release-desktop-full.ps1 -SkipNsis",
+    "desktop:shortcut:pack": "powershell -ExecutionPolicy Bypass -File scripts/install-shortcut-to-unpacked.ps1",
+    "desktop:shortcut:dev": "powershell -ExecutionPolicy Bypass -File scripts/install-shortcut-npm-start.ps1",
+    "dist:portable": "electron-builder --win portable",
+    "package:portable": "powershell -ExecutionPolicy Bypass -NoProfile -File scripts/package-portable.ps1",
+    "site:open": "powershell -NoProfile -Command \"Start-Process docs/index.html\"",
+    "site:meta": "node scripts/update-release-meta.js",
+    "site:serve": "node scripts/site-serve.js",
+    "site:release": "npm run dist && npm run package:portable && npm run site:meta",
+    "pack:exe": "npx electron-packager . \"AI-Content-Studio\" --platform=win32 --arch=x64 --out=release --overwrite --prune=true",
+    "installer:exe": "npm run pack:exe && node scripts/create-installer.js"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3",
+    "electron-packager": "^17.1.2",
+    "electron-winstaller": "^5.4.0"
+  },
+  "dependencies": {
+    "docx": "^9.6.1",
+    "dompurify": "^3.4.2",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
+    "jspdf": "^4.2.1",
+    "mammoth": "^1.12.0",
+    "marked": "^18.0.3",
+    "mime-types": "^2.1.35",
+    "officeparser": "^4.2.0",
+    "papaparse": "^5.5.3",
+    "pdf-parse": "^1.1.4",
+    "pdfkit": "^0.15.2",
+    "pptxgenjs": "^3.12.0",
+    "tesseract.js": "^7.0.0",
+    "xlsx": "^0.18.5"
+  },
+  "build": {
+    "appId": "com.local.ai-desktop-analyst",
+    "productName": "藏经阁",
+    "executableName": "cangjingge",
+    "files": [
+      "electron/**/*",
+      "openaiStructuredClient.js",
+      "scripts/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.productivity"
+    },
+    "dmg": {
+      "artifactName": "藏经阁-${version}-Mac.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "藏经阁",
+      "artifactName": "藏经阁-Setup-${version}.${ext}"
+    }
+  }
+}

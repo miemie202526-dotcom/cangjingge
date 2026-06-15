@@ -1,0 +1,149 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    name: Build Mac arm64
+    runs-on: macos-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run check
+      - run: npm run check:syntax
+
+      - name: Build app directory
+        run: npx electron-builder --mac dir --arm64 --publish never
+
+      - name: Package Mac zip
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          APP_SRC=""
+          if [ -d "release/mac-arm64/cangjingge.app" ]; then
+            APP_SRC="release/mac-arm64/cangjingge.app"
+          elif [ -d "release/mac-arm64/藏经阁.app" ]; then
+            APP_SRC="release/mac-arm64/藏经阁.app"
+          else
+            echo "Missing mac app under release/mac-arm64" >&2
+            exit 1
+          fi
+          codesign --force --deep --sign - "$APP_SRC"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_SRC" "release/藏经阁-v${VERSION}-Mac-arm64.zip"
+          cp -f "release/藏经阁-v${VERSION}-Mac-arm64.zip" "release/Cangjingge-latest-Mac-arm64.zip"
+          shasum -a 256 "release/藏经阁-v${VERSION}-Mac-arm64.zip" > "release/Cangjingge-latest-Mac-arm64.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-arm64
+          path: |
+            release/藏经阁-v*-Mac-arm64.zip
+            release/Cangjingge-latest-Mac-arm64.zip
+            release/Cangjingge-latest-Mac-arm64.sha256
+
+  windows:
+    name: Build Windows x64
+    runs-on: windows-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run check
+      - run: npm run check:syntax
+
+      - name: Build app directory
+        run: npx electron-builder --win dir --x64 --publish never
+
+      - name: Package Windows zip
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = node -p "require('./package.json').version"
+          $src = "release/win-unpacked"
+          if (-not (Test-Path $src)) { throw "Missing $src" }
+          $stageRoot = Join-Path $env:RUNNER_TEMP "cangjingge-win"
+          $stageName = "Cangjingge-v$version-Windows-x64"
+          $stage = Join-Path $stageRoot $stageName
+          Remove-Item $stageRoot -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $stage | Out-Null
+          Copy-Item "$src/*" $stage -Recurse -Force
+          $zip = "release/藏经阁-v$version-Windows-x64.zip"
+          $latest = "release/Cangjingge-latest-Windows-x64.zip"
+          Compress-Archive -Path $stage -DestinationPath $zip -Force
+          Copy-Item $zip $latest -Force
+          Get-FileHash $zip -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  $zip" } |
+            Set-Content "release/Cangjingge-latest-Windows-x64.sha256" -Encoding ascii
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: |
+            release/藏经阁-v*-Windows-x64.zip
+            release/Cangjingge-latest-Windows-x64.zip
+            release/Cangjingge-latest-Windows-x64.sha256
+
+  publish:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs: [mac, windows]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: downloaded
+
+      - name: Prepare release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          find downloaded -maxdepth 3 -type f -print -exec cp -f {} release/ \;
+          VERSION="$(node -p "require('./package.json').version")"
+          BASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/"
+          RELEASE_BASE_URL="$BASE_URL" node scripts/write-update-manifest.js
+          sha256sum release/Cangjingge-latest.json > release/Cangjingge-latest.sha256
+          ls -lh release
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: 藏经阁 ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            release/藏经阁-v*-Mac-arm64.zip
+            release/Cangjingge-latest-Mac-arm64.zip
+            release/Cangjingge-latest-Mac-arm64.sha256
+            release/藏经阁-v*-Windows-x64.zip
+            release/Cangjingge-latest-Windows-x64.zip
+            release/Cangjingge-latest-Windows-x64.sha256
+            release/Cangjingge-latest.json
+            release/Cangjingge-latest.sha256

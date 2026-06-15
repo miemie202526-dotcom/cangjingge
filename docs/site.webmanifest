@@ -1,0 +1,13 @@
+{
+  "name": "藏经阁",
+  "short_name": "藏经阁",
+  "description": "本地运行的 AI 内容工作台 · 私人典籍 · 智能编修",
+  "icons": [
+    { "src": "./assets/icon-256.png", "sizes": "256x256", "type": "image/png" },
+    { "src": "./assets/icon-1024.png", "sizes": "1024x1024", "type": "image/png" }
+  ],
+  "theme_color": "#dc2626",
+  "background_color": "#0b0712",
+  "display": "browser",
+  "lang": "zh-CN"
+}

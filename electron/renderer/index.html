@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>藏经阁</title>
+    <script>
+      try {
+        var q = new URLSearchParams(window.location.search);
+        var wt = q.get("wt");
+        if (wt) document.title = decodeURIComponent(wt);
+      } catch (e) {}
+    </script>
+    <link rel="icon" type="image/png" href="../assets/app-icon.png" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="theme-dark">
+    <div id="toastHost" class="toast-host" aria-live="polite"></div>
+
+    <div class="app-layout">
+      <aside class="sidebar glass">
+        <div class="sidebar-brand">
+          <div class="brand-mark" aria-hidden="true">
+            <span class="brand-mark-char">藏</span>
+            <span class="brand-mark-glow"></span>
+          </div>
+          <div class="sidebar-brand-text">
+            <div id="sidebarBrandTitle" class="sidebar-title"></div>
+            <div id="sidebarBrandSub" class="sidebar-brand-sub">智能文件库 · AI 工作台</div>
+            <div id="sidebarBuildMeta" class="sidebar-meta sidebar-build-meta"></div>
+            <div id="sidebarTagline" class="sidebar-meta sidebar-tagline muted"></div>
+          </div>
+        </div>
+        <div class="sidebar-divider" aria-hidden="true"></div>
+
+        <div class="sidebar-section-label">主操作台</div>
+        <nav class="sidebar-nav" id="sidebarNav">
+          <button type="button" class="nav-item" data-page="dashboard" data-group="main">
+            <span class="nav-ico">⌘</span><span class="nav-label" data-nav="dashboard"></span>
+          </button>
+          <button type="button" class="nav-item" data-page="library" data-group="main">
+            <span class="nav-ico">▦</span><span class="nav-label" data-nav="library"></span>
+          </button>
+          <button type="button" class="nav-item" data-page="analysis" data-group="main">
+            <span class="nav-ico">◇</span><span class="nav-label" data-nav="analysis"></span>
+          </button>
+          <button type="button" class="nav-item" data-page="generator" data-group="main">
+            <span class="nav-ico">✎</span><span class="nav-label" data-nav="generator"></span>
+          </button>
+          <div class="sidebar-section-label">知识沉淀</div>
+          <button type="button" class="nav-item" data-page="phrasebook" data-group="creative">
+            <span class="nav-ico">❞</span><span class="nav-label" data-nav="phrasebook"></span>
+          </button>
+          <div class="sidebar-section-label">系统</div>
+          <button type="button" class="nav-item" data-page="history" data-group="system">
+            <span class="nav-ico">↺</span><span class="nav-label" data-nav="history"></span>
+          </button>
+          <button type="button" class="nav-item" data-page="settings" data-group="system">
+            <span class="nav-ico">⚙</span><span class="nav-label" data-nav="settings"></span>
+          </button>
+        </nav>
+        <div class="sidebar-foot">
+          <div class="sidebar-foot-pill" id="sidebarFootPill">
+            <span class="sf-dot"></span>
+            <span class="sf-text">v<span id="sidebarFootVer">—</span> · 本地存储</span>
+          </div>
+        </div>
+      </aside>
+
+      <div class="main-area">
+        <header class="top-header glass">
+          <input id="headerProjectName" class="project-input" type="text" maxlength="100" />
+          <button type="button" class="hdr-command-btn" id="headerCommandBtn" title="全局指挥 / 快速跳转（⌘K）">
+            <span class="hdr-command-ico" aria-hidden="true">⌘</span>
+            <span>全局指挥</span>
+            <kbd>⌘K</kbd>
+          </button>
+          <div class="header-spacer"></div>
+          <label class="hdr-label" for="headerModel" id="lblHeaderModel"></label>
+          <select id="headerModel" class="hdr-select"></select>
+          <span id="headerKeyBadge" class="hdr-badge muted"></span>
+          <select id="headerViewMode" class="hdr-select view-select" aria-label="视图模式"></select>
+          <select id="headerThemeBtn" class="hdr-select theme-select" aria-label="视觉主题"></select>
+        </header>
+
+        <main class="page-stack">
+          <section id="page-dashboard" class="page" data-page="dashboard">
+            <div class="page-inner"></div>
+          </section>
+          <section id="page-library" class="page" data-page="library">
+            <div class="page-inner"></div>
+          </section>
+          <section id="page-analysis" class="page" data-page="analysis">
+            <div class="page-inner"></div>
+          </section>
+          <section id="page-generator" class="page" data-page="generator">
+            <div class="page-inner"></div>
+          </section>
+          <section id="page-phrasebook" class="page" data-page="phrasebook">
+            <div class="page-inner"></div>
+          </section>
+          <section id="page-history" class="page" data-page="history">
+            <div class="page-inner"></div>
+          </section>
+          <section id="page-settings" class="page" data-page="settings">
+            <div class="page-inner"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <div id="commandOverlay" class="command-overlay hidden" aria-hidden="true">
+      <div class="command-dialog glass" role="dialog" aria-modal="true" aria-label="全局指挥">
+        <div class="command-search-row">
+          <span class="command-search-ico" aria-hidden="true">⌘</span>
+          <input id="commandInput" class="command-input" type="search" autocomplete="off" placeholder="搜索页面、输入任务、查资料、生成文件…" />
+          <button type="button" class="command-close" id="commandClose" aria-label="关闭">×</button>
+        </div>
+        <div id="commandResults" class="command-results"></div>
+        <div class="command-foot">
+          <span>输入关键词后按 Enter 执行</span>
+          <span>Esc 关闭 · ↑↓ 选择</span>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

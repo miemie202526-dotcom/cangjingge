@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>藏经阁 · 私人典籍 · 智能编修</title>
+    <meta
+      name="description"
+      content="藏经阁 — 本地运行的 AI 内容工作台。文件库、AI 内容分析、智能文档生成、AI 修图、图标生成、金句库、历史与设置全链路打通；数据自留、密钥本地加密。"
+    />
+    <meta name="keywords" content="藏经阁, AI 写作, AI 文档生成, Electron, 本地 AI 工具, 内容工作台, 文件库, 金句库" />
+    <meta name="author" content="藏经阁" />
+    <meta name="theme-color" content="#dc2626" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="icon" type="image/png" href="./assets/icon-256.png" />
+    <link rel="apple-touch-icon" href="./assets/icon-256.png" />
+    <link rel="manifest" href="./site.webmanifest" />
+    <link rel="canonical" href="./" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="藏经阁 · 私人典籍 · 智能编修" />
+    <meta property="og:description" content="本地运行的 AI 内容工作台。把素材沉淀进自己的「藏经阁」，让 AI 帮你分析、生成、配图、定稿、归档。" />
+    <meta property="og:image" content="./assets/icon-1024.png" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="藏经阁 · 私人典籍 · 智能编修" />
+    <meta name="twitter:description" content="本地运行的 AI 内容工作台 · 数据自留 · 智能编修" />
+    <meta name="twitter:image" content="./assets/icon-1024.png" />
+
+    <style>
+      :root {
+        --bg-0: #0b0712;
+        --bg-1: #110b1f;
+        --bg-2: #1a1130;
+        --line: rgba(251, 191, 36, 0.18);
+        --line-strong: rgba(251, 191, 36, 0.4);
+        --text: #f5f3ef;
+        --text-soft: #b8b3a6;
+        --gold: #fbbf24;
+        --gold-deep: #d97706;
+        --red: #dc2626;
+        --red-deep: #991b1b;
+        --indigo: #6366f1;
+        --pink: #ec4899;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        font-family: "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC",
+          "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        background:
+          radial-gradient(1100px 700px at 80% -10%, rgba(220, 38, 38, 0.18), transparent 65%),
+          radial-gradient(900px 600px at 10% 110%, rgba(99, 102, 241, 0.18), transparent 60%),
+          linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 60%, var(--bg-2) 100%);
+        color: var(--text);
+        min-height: 100vh;
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+      a { color: var(--gold); text-decoration: none; transition: color .15s; }
+      a:hover { color: #fde68a; }
+      code { font-family: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace; font-size: .92em; }
+      .container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+      /* ============ 顶部「需要配置」横幅 ============ */
+      .config-banner {
+        background: linear-gradient(135deg, rgba(99, 102, 241, .25), rgba(220, 38, 38, .25));
+        border-bottom: 1px solid rgba(165, 180, 252, .35);
+        padding: 12px 24px;
+        text-align: center;
+        font-size: .92rem;
+      }
+      .config-banner button {
+        margin-left: 10px;
+        padding: 5px 14px;
+        border-radius: 999px;
+        background: var(--gold);
+        color: #1a1130; font-weight: 700;
+        border: none; cursor: pointer;
+        transition: transform .12s;
+      }
+      .config-banner button:hover { transform: translateY(-1px); }
+
+      /* ============ 顶部导航 ============ */
+      .nav {
+        position: sticky; top: 0; z-index: 50;
+        backdrop-filter: blur(14px);
+        background: rgba(11, 7, 18, 0.78);
+        border-bottom: 1px solid rgba(251, 191, 36, 0.12);
+      }
+      .nav-inner {
+        display: flex; align-items: center; gap: 24px;
+        padding: 14px 24px;
+        max-width: 1180px; margin: 0 auto;
+      }
+      .nav-brand { display: flex; align-items: center; gap: 12px; font-weight: 600; }
+      .nav-brand img { width: 32px; height: 32px; border-radius: 8px; }
+      .nav-brand-text { font-size: 1.05rem; letter-spacing: 0.04em; }
+      .nav-links { display: flex; gap: 22px; margin-left: auto; align-items: center; }
+      .nav-links a { color: var(--text-soft); font-size: 0.95rem; }
+      .nav-links a:hover { color: var(--gold); }
+      .nav-cta {
+        padding: 8px 18px; border-radius: 999px;
+        background: linear-gradient(135deg, var(--red) 0%, var(--gold-deep) 100%);
+        color: #fff !important; font-weight: 600; font-size: 0.9rem;
+        box-shadow: 0 4px 14px rgba(220, 38, 38, 0.4);
+        transition: transform .15s, box-shadow .15s;
+      }
+      .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(220, 38, 38, 0.55); }
+      @media (max-width: 760px) {
+        .nav-links a:not(.nav-cta) { display: none; }
+      }
+
+      /* ============ Hero ============ */
+      .hero { padding: 80px 0 60px; position: relative; overflow: hidden; }
+      .hero-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 60px; align-items: center; }
+      @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; gap: 40px; } }
+      .hero h1 {
+        font-size: clamp(2.6rem, 6vw, 4.5rem);
+        margin: 0 0 18px;
+        font-weight: 700;
+        background: linear-gradient(120deg, #fde68a 0%, #f59e0b 40%, #dc2626 80%);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+        letter-spacing: 0.06em; line-height: 1.1;
+      }
+      .hero-sub { font-size: 1.18rem; color: var(--text-soft); margin: 0 0 12px; letter-spacing: 0.08em; }
+      .hero-tag {
+        display: inline-block; font-size: 0.84rem; padding: 4px 12px; margin-bottom: 22px;
+        border-radius: 999px; border: 1px solid var(--line-strong);
+        background: rgba(251, 191, 36, 0.08); color: var(--gold); letter-spacing: 0.16em;
+      }
+      .hero-desc { font-size: 1.05rem; color: #d6d3c9; margin: 0 0 32px; max-width: 540px; }
+      .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+      .btn {
+        display: inline-flex; align-items: center; gap: 10px;
+        padding: 14px 26px; border-radius: 12px;
+        font-weight: 600; font-size: 1rem; cursor: pointer; border: none;
+        transition: transform .15s, box-shadow .15s, background .15s;
+        text-decoration: none;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, var(--red) 0%, var(--gold-deep) 100%);
+        color: #fff !important;
+        box-shadow: 0 8px 24px rgba(220, 38, 38, 0.45);
+      }
+      .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(220, 38, 38, 0.6); color: #fff !important; }
+      .btn-ghost { background: rgba(255, 255, 255, 0.06); color: var(--text) !important; border: 1px solid var(--line-strong); }
+      .btn-ghost:hover { background: rgba(255, 255, 255, 0.1); transform: translateY(-2px); }
+      .hero-meta { display: flex; gap: 22px; margin-top: 22px; color: var(--text-soft); font-size: 0.86rem; flex-wrap: wrap; }
+      .hero-meta span { display: inline-flex; align-items: center; gap: 6px; }
+      .hero-meta b { color: var(--gold); font-weight: 600; font-family: ui-monospace, monospace; }
+
+      .hero-art { position: relative; display: flex; align-items: center; justify-content: center; }
+      .seal {
+        width: clamp(220px, 32vw, 360px);
+        aspect-ratio: 1;
+        border-radius: 28px;
+        background:
+          radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.18), transparent 60%),
+          linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%);
+        border: 6px solid var(--gold);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow:
+          0 30px 80px rgba(220, 38, 38, 0.55),
+          inset 0 0 60px rgba(0, 0, 0, 0.35);
+        position: relative;
+        animation: seal-float 6s ease-in-out infinite;
+      }
+      @keyframes seal-float {
+        0%, 100% { transform: translateY(0) rotate(-2deg); }
+        50%      { transform: translateY(-12px) rotate(2deg); }
+      }
+      .seal::after {
+        content: ""; position: absolute; inset: 16px;
+        border-radius: 16px; border: 2px dashed rgba(251, 191, 36, 0.4);
+        pointer-events: none;
+      }
+      .seal-char {
+        font-family: "Source Han Serif SC", "Songti SC", serif;
+        font-weight: 900;
+        font-size: clamp(110px, 18vw, 200px);
+        color: var(--gold);
+        text-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+      }
+
+      section { padding: 70px 0; }
+      .sec-label { font-size: 0.78rem; letter-spacing: 0.4em; color: var(--gold); text-transform: uppercase; margin-bottom: 12px; opacity: 0.85; }
+      .sec-title { font-size: clamp(1.8rem, 3.5vw, 2.6rem); margin: 0 0 14px; font-weight: 700; letter-spacing: 0.04em; }
+      .sec-sub { color: var(--text-soft); font-size: 1.05rem; max-width: 720px; margin: 0 0 36px; }
+
+      .grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+      .card {
+        padding: 26px; border-radius: 18px;
+        background: rgba(26, 17, 48, 0.55);
+        border: 1px solid rgba(251, 191, 36, 0.14);
+        backdrop-filter: blur(8px);
+        transition: transform .2s, border-color .2s, box-shadow .2s;
+        position: relative; overflow: hidden;
+      }
+      .card:hover { transform: translateY(-4px); border-color: var(--line-strong); box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35); }
+      .card-ico {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 50px; height: 50px; border-radius: 14px;
+        font-family: "Source Han Serif SC", "Songti SC", serif;
+        font-size: 1.6rem; font-weight: 700; color: var(--gold);
+        background: linear-gradient(135deg, rgba(220, 38, 38, 0.45), rgba(99, 102, 241, 0.25));
+        margin-bottom: 16px; border: 1px solid rgba(251, 191, 36, 0.32);
+      }
+      .card h3 { margin: 0 0 8px; font-size: 1.18rem; }
+      .card p { margin: 0; color: var(--text-soft); font-size: 0.95rem; line-height: 1.7; }
+      .card .tag { display: inline-block; margin-top: 12px; font-size: 0.74rem; padding: 2px 10px; background: rgba(99, 102, 241, 0.18); color: #a5b4fc; border-radius: 999px; letter-spacing: 0.04em; }
+
+      .highlights { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+      .highlight {
+        padding: 32px; border-radius: 22px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(220, 38, 38, 0.08));
+        border: 1px solid rgba(165, 180, 252, 0.22);
+      }
+      .highlight ul { padding-left: 1.2em; margin: 12px 0 0; color: var(--text-soft); }
+      .highlight li { margin-bottom: 8px; }
+
+      /* ============ Download ============ */
+      #download { background: radial-gradient(700px 300px at 50% 0%, rgba(220, 38, 38, 0.2), transparent 70%); }
+      .dl-card { padding: 40px; border-radius: 22px;
+        background: linear-gradient(135deg, rgba(26, 17, 48, 0.85), rgba(11, 7, 18, 0.85));
+        border: 1px solid var(--line-strong); text-align: center; }
+      .dl-row { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 30px; }
+      .dl-item {
+        padding: 22px; background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(251, 191, 36, 0.18);
+        border-radius: 14px; text-align: left; position: relative;
+      }
+      .dl-item .badge-rec {
+        position: absolute; top: -10px; right: 14px;
+        background: linear-gradient(135deg, var(--gold), var(--red));
+        color: #1a1130; font-weight: 700; font-size: .72rem;
+        padding: 3px 10px; border-radius: 999px; letter-spacing: .1em;
+      }
+      .dl-item h4 { margin: 0 0 6px; color: var(--gold); font-size: 1.05rem; }
+      .dl-item p { margin: 0 0 14px; font-size: 0.9rem; color: var(--text-soft); }
+      .dl-item .meta { font-family: ui-monospace, monospace; font-size: 0.78rem; color: #a5b4fc; }
+      .dl-item .btn { padding: 10px 18px; font-size: 0.92rem; }
+
+      .sha-block {
+        margin: 28px auto 0; max-width: 900px;
+        padding: 18px 22px; border-radius: 12px;
+        background: rgba(15, 23, 42, 0.5);
+        border: 1px dashed rgba(165, 180, 252, .3);
+        text-align: left; font-size: .85rem;
+      }
+      .sha-block strong { color: var(--gold); }
+      .sha-row {
+        display: grid; grid-template-columns: 110px 1fr auto;
+        gap: 10px; align-items: center; padding: 6px 0;
+        border-top: 1px dashed rgba(255, 255, 255, .08);
+      }
+      .sha-row:first-of-type { border-top: 0; }
+      .sha-row code { color: #fde68a; word-break: break-all; }
+      .sha-copy {
+        background: rgba(251, 191, 36, .15);
+        color: var(--gold);
+        border: 1px solid rgba(251, 191, 36, .3);
+        padding: 4px 10px; font-size: .76rem;
+        border-radius: 6px; cursor: pointer; white-space: nowrap;
+      }
+      .sha-copy:hover { background: rgba(251, 191, 36, .28); }
+
+      /* ============ FAQ ============ */
+      details {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(251, 191, 36, 0.12);
+        border-radius: 12px; padding: 16px 20px; margin-bottom: 12px;
+        transition: border-color .15s;
+      }
+      details[open] { border-color: var(--line-strong); }
+      summary { cursor: pointer; font-weight: 600; font-size: 1.02rem; outline: none; }
+      details > p, details > div { margin-top: 10px; color: var(--text-soft); }
+
+      footer {
+        padding: 50px 0 60px; text-align: center; color: var(--text-soft);
+        border-top: 1px solid rgba(251, 191, 36, 0.12); margin-top: 60px;
+      }
+      footer a { color: var(--gold); }
+
+      .badge {
+        display: inline-block; padding: 3px 10px; font-size: 0.74rem;
+        border-radius: 999px;
+        background: rgba(34, 197, 94, 0.18); color: #86efac;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        letter-spacing: 0.06em; margin-left: 8px; vertical-align: middle;
+      }
+
+      /* ============ Modal ============ */
+      .modal-back {
+        position: fixed; inset: 0; z-index: 100;
+        background: rgba(0, 0, 0, .7); backdrop-filter: blur(6px);
+        display: flex; align-items: center; justify-content: center; padding: 24px;
+        overflow-y: auto;
+      }
+      .modal {
+        background: linear-gradient(135deg, var(--bg-1), var(--bg-2));
+        border: 1px solid var(--line-strong);
+        border-radius: 18px; padding: 30px; max-width: 520px; width: 100%;
+        max-height: calc(100vh - 48px); overflow-y: auto;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
+      }
+      .modal h3 { margin: 0 0 12px; color: var(--gold); }
+      .modal label { display: block; margin: 14px 0 6px; color: var(--text-soft); font-size: .9rem; }
+      .modal input {
+        width: 100%; padding: 10px 12px; border-radius: 8px;
+        background: rgba(0, 0, 0, .4); color: var(--text);
+        border: 1px solid rgba(251, 191, 36, .25); font-size: .95rem;
+      }
+      .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+      .modal .hint { color: var(--text-soft); font-size: .85rem; margin-top: 16px; }
+      .modal .hint code { color: var(--gold); }
+
+      .toast {
+        position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+        background: rgba(34, 197, 94, .92); color: #052e16;
+        font-weight: 600; padding: 10px 22px; border-radius: 999px;
+        box-shadow: 0 8px 22px rgba(34, 197, 94, .4); z-index: 200;
+        animation: toast-pop .25s ease-out;
+      }
+      @keyframes toast-pop { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+      /* light theme via prefers-color-scheme */
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg-0: #fdf6e3; --bg-1: #faf3df; --bg-2: #f5e9c4;
+          --text: #1a1130; --text-soft: #4b3f2c;
+          --line: rgba(180, 83, 9, .25); --line-strong: rgba(180, 83, 9, .5);
+        }
+        body { background:
+          radial-gradient(1100px 700px at 80% -10%, rgba(220, 38, 38, .12), transparent 65%),
+          radial-gradient(900px 600px at 10% 110%, rgba(99, 102, 241, .12), transparent 60%),
+          linear-gradient(180deg, #fffaf0 0%, #faf3df 60%, #f5e9c4 100%); }
+        .nav { background: rgba(255, 250, 240, .85); border-color: rgba(180, 83, 9, .15); }
+        .card { background: rgba(255, 255, 255, .65); }
+        .dl-card, .highlight { background: rgba(255, 255, 255, .6); }
+        details { background: rgba(255, 255, 255, .55); }
+        .sha-block { background: rgba(255, 255, 255, .55); }
+        .sha-row code { color: #b45309; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ====== 顶部「未配置」横幅，URL 还是 placeholder 时才显示 ====== -->
+    <div id="configBanner" class="config-banner" style="display:none">
+      ⚙ 你还没配置仓库地址，下载按钮目前指向占位符。
+      <button id="openConfigBtn" type="button">点这里配置</button>
+    </div>
+
+    <!-- ====== 顶部导航 ====== -->
+    <nav class="nav">
+      <div class="nav-inner">
+        <a href="#" class="nav-brand">
+          <img src="./assets/icon-256.png" alt="藏经阁" />
+          <span class="nav-brand-text">藏经阁</span>
+        </a>
+        <div class="nav-links">
+          <a href="#features">功能</a>
+          <a href="#highlights">亮点</a>
+          <a href="#download">下载</a>
+          <a href="#faq">FAQ</a>
+          <a href="./CHANGELOG.md">更新日志</a>
+          <a id="navCta" href="#download" class="nav-cta">立即下载</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ====== Hero ====== -->
+    <header class="hero">
+      <div class="container hero-grid">
+        <div>
+          <span class="hero-tag">私人典籍 · 智能编修</span>
+          <h1>藏经阁</h1>
+          <p class="hero-sub">本地运行的 AI 内容工作台 · 沉淀 · 创作 · 定稿</p>
+          <p class="hero-desc">
+            把文档、灵感、金句、图样统一沉淀进自己的「藏经阁」，让 AI 帮你
+            <b>分析素材、生成稿件、配图制章、版本对比、定稿归档</b>。
+            数据全部留在本机，密钥用系统安全存储保管。
+          </p>
+          <div class="hero-cta">
+            <a id="primaryDownload" href="#download" class="btn btn-primary">
+              ⬇ 下载 Windows 版 <span id="primaryVer" style="opacity:.85;font-weight:400">v1.0.31</span>
+            </a>
+            <a href="#features" class="btn btn-ghost">看看都有什么 →</a>
+          </div>
+          <div class="hero-meta">
+            <span>📦 当前版本 <b id="metaVer">v1.0.31</b></span>
+            <span>🖥 平台 <b id="metaOs">Windows 10/11 · x64</b></span>
+            <span>🔒 离线运行 · 数据自留</span>
+            <span>⚡ Electron 31</span>
+          </div>
+        </div>
+        <div class="hero-art">
+          <div class="seal" aria-hidden="true">
+            <span class="seal-char">藏</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ====== 功能 ====== -->
+    <section id="features">
+      <div class="container">
+        <div class="sec-label">Features · 九大模块</div>
+        <h2 class="sec-title">一座属于你的「藏经阁」</h2>
+        <p class="sec-sub">
+          每个模块都为「内容工作」打磨过：从素材入库、AI 编修、定稿导出到金句沉淀，
+          流程一气呵成，数据本地留存。
+        </p>
+        <div class="grid">
+          <div class="card"><div class="card-ico">案</div><h3>仪表盘</h3><p>总览今日进度、文件库与任务统计，所有模块在此入口。</p><span class="tag">主操作台</span></div>
+          <div class="card"><div class="card-ico">卷</div><h3>文件库</h3><p>磁盘文件库 + IndexedDB 双写：上传、解析、预览、分类、标注，关键词检索后一键发往分析或生成。</p><span class="tag">主操作台</span></div>
+          <div class="card"><div class="card-ico">鉴</div><h3>AI 内容分析</h3><p>结构化分析任务：摘要、要点、风险、机会、改进建议；可保存到历史并复用。</p><span class="tag">主操作台</span></div>
+          <div class="card"><div class="card-ico">笔</div><h3>智能文档生成</h3><p>23 项进阶能力：预设/模板、目标字数、token 预算、并行 A/B/C、章节级重写、版本对比、批注、AI 自评、Bundle 矩阵导出、品牌包……</p><span class="tag">主操作台</span></div>
+          <div class="card"><div class="card-ico">印</div><h3>图标生成</h3><p>风格化生成 App / 文件 / 标识图标，多尺寸一键导出。</p><span class="tag">创作</span></div>
+          <div class="card"><div class="card-ico">绘</div><h3>AI 修图</h3><p>选区指令式修图，写一句「换天空 / 去水印 / 改色调」即出片。</p><span class="tag">创作</span></div>
+          <div class="card"><div class="card-ico">句</div><h3>金句库</h3><p>把好句子分类沉淀：搜索、标签、闪卡复习、批量粘贴、关键词跳查、收藏与备注。</p><span class="tag">创作</span></div>
+          <div class="card"><div class="card-ico">史</div><h3>历史</h3><p>所有分析、生成、图标、修图任务自动归档；可搜索、再次运行、导出。</p><span class="tag">系统</span></div>
+          <div class="card"><div class="card-ico">设</div><h3>设置</h3><p>API Key 走系统安全存储；导出/导入备份；一键清空本地数据；主题切换。</p><span class="tag">系统</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== 亮点 ====== -->
+    <section id="highlights">
+      <div class="container">
+        <div class="sec-label">Why · 与众不同之处</div>
+        <h2 class="sec-title">为什么选藏经阁</h2>
+        <div class="highlights">
+          <div class="highlight">
+            <h3>🔒 本地优先 · 数据自留</h3>
+            <p style="margin:0;color:var(--text-soft)">
+              文档、历史、金句、设置全部存在你自己机器上的 IndexedDB 与磁盘库；
+              API 密钥用 Electron <code>safeStorage</code> 加密保管，
+              任何备份导出都不会带出密钥。
+            </p>
+          </div>
+          <div class="highlight">
+            <h3>🧰 文档生成器 23 项进阶 <span class="badge" id="hlBadgeVer">v1.0.31</span></h3>
+            <ul>
+              <li>预设 / 我的模板 / 最近 10 条 / 模板包导入导出</li>
+              <li>目标字数 + 容差、Token 预算、键盘快捷键</li>
+              <li>大纲优先、并行 A/B/C 变体、生成队列</li>
+              <li>章节级重写/删/插/移、版本 Diff、AI 自评</li>
+              <li>批注（黄底高亮）、Markdown 表格 → Mermaid 图</li>
+              <li>封面页、品牌包、Bundle 场景一键勾选</li>
+            </ul>
+          </div>
+          <div class="highlight">
+            <h3>📚 文件库 ↔ 金句库 ↔ 生成器 互通</h3>
+            <p style="margin:0;color:var(--text-soft)">
+              一份素材在三个模块间自由流转：从文件库选段去分析、
+              生成完一键存进金句库 / 文件库，关键词全局可搜索。
+            </p>
+          </div>
+          <div class="highlight">
+            <h3>🎨 全格式导出</h3>
+            <p style="margin:0;color:var(--text-soft)">
+              docx · xlsx · pdf · pptx · html · slides · md · csv · json，
+              支持「交付包」一次导出多份；中文字体自动选用系统 CJK，
+              PDF 不再乱码。
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== 下载 ====== -->
+    <section id="download">
+      <div class="container">
+        <div class="dl-card">
+          <div class="sec-label" style="text-align:center">Download · 立即上手</div>
+          <h2 class="sec-title">下载 藏经阁 <span id="dlVer">v1.0.31</span></h2>
+          <p style="color:var(--text-soft); max-width:600px; margin:0 auto">
+            <span id="osLabel">Windows 10 / 11 · x64</span> · 无需注册账号 · 解压即用 / 双击安装两种方式任选。
+          </p>
+
+          <div class="dl-row">
+            <div class="dl-item">
+              <span class="badge-rec">推荐</span>
+              <h4>🟢 安装版（NSIS）</h4>
+              <p>一次双击安装到默认目录，自动创建桌面 / 开始菜单快捷方式，自动注册卸载入口。</p>
+              <div class="meta" id="metaInstaller">藏经阁-Setup-1.0.31.exe · 108 MB</div>
+              <a id="dlInstaller" href="#" class="btn btn-primary" style="margin-top:14px">⬇ 下载安装版</a>
+            </div>
+            <div class="dl-item">
+              <h4>📦 便携版（解压即用）</h4>
+              <p>解压后双击 <code>藏经阁.exe</code> 直接运行，不写注册表，可放 U 盘随身带。</p>
+              <div class="meta" id="metaPortable">藏经阁-portable-1.0.31.zip · 155 MB</div>
+              <a id="dlPortable" href="#" class="btn btn-ghost" style="margin-top:14px">⬇ 下载便携版</a>
+            </div>
+            <div class="dl-item">
+              <h4>🛠 源码 / 开发版</h4>
+              <p>克隆仓库自己跑，<code>npm i &amp;&amp; npm start</code>。 适合修改 / 二次开发 / 审计。</p>
+              <div class="meta" id="metaRepo">GitHub · MIT License</div>
+              <a id="dlRepo" href="#" class="btn btn-ghost" style="margin-top:14px">→ 打开仓库</a>
+            </div>
+          </div>
+
+          <div class="sha-block">
+            <strong>🔐 SHA256 校验</strong>
+            <p style="margin:6px 0 12px; color:var(--text-soft); font-size:.84rem">
+              下载完成后，PowerShell 运行 <code>Get-FileHash 文件名 -Algorithm SHA256</code>，对比下方哈希一致即文件未被篡改。
+            </p>
+            <div class="sha-row">
+              <span>安装版</span>
+              <code id="shaInstaller">—</code>
+              <button class="sha-copy" data-copy="installer">复制</button>
+            </div>
+            <div class="sha-row">
+              <span>便携版</span>
+              <code id="shaPortable">—</code>
+              <button class="sha-copy" data-copy="portable">复制</button>
+            </div>
+          </div>
+
+          <p style="margin-top:24px; font-size:.85rem; color:var(--text-soft)">
+            首次启动如被 Windows SmartScreen 拦截，点「更多信息 → 仍要运行」即可。
+            <button id="openConfigBtn2" type="button" style="margin-left:8px;background:rgba(99,102,241,.2);border:1px solid rgba(165,180,252,.4);color:#c7d2fe;padding:4px 12px;border-radius:999px;cursor:pointer;font-size:.78rem">⚙ 配置仓库地址</button>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== FAQ ====== -->
+    <section id="faq">
+      <div class="container">
+        <div class="sec-label">FAQ · 常见疑问</div>
+        <h2 class="sec-title">下载 / 使用 常见问题</h2>
+
+        <details>
+          <summary>是否需要联网 / API Key？</summary>
+          <p>软件本身离线可用：文件库 / 金句库 / 历史 / 导出全部本地完成。只有调用 AI（分析、生成、图标、修图）时才需要联网，需要你在「设置」里填一次 OpenAI 兼容 API Key。未配置 Key 时也可以走 Demo 流程通体演示。</p>
+        </details>
+        <details>
+          <summary>数据存在哪里？我能搬到另一台电脑吗？</summary>
+          <p>素材正文存于 <code>%LOCALAPPDATA%\AIContentStudio\userData</code> 下的磁盘文件库；索引、历史、金句、设置存于浏览器内核的 IndexedDB（<code>ACSPProDB</code>）。进入「设置 → 导出全部数据」即可导出 JSON 备份，到新机器「导入」即可。</p>
+        </details>
+        <details>
+          <summary>API Key 安全吗？</summary>
+          <p>Key 由 Electron <code>safeStorage</code> 加密落盘（DPAPI / Keychain），不会出现在 IndexedDB / 备份 JSON / 历史中。源码里也有「设置 → 一键清空全部数据」的回收站。</p>
+        </details>
+        <details>
+          <summary>未来会有 Mac / Linux 版本吗？</summary>
+          <p>技术上 Electron 跨平台，工具链也都支持；目前优先打磨 Windows 版稳定性，Mac / Linux 包会在主线功能稳定后随主版本一起出。</p>
+        </details>
+        <details>
+          <summary>升级会不会丢老数据？</summary>
+          <p>不会。新版本沿用同名 IndexedDB（<code>ACSPProDB</code>）与磁盘库目录；从「AI Content Studio Pro」改名为「藏经阁」后数据库与文件库目录保持兼容。建议升级前先「设置 → 导出全部数据」做一次备份。</p>
+        </details>
+        <details>
+          <summary>下载链接打不开？</summary>
+          <p>站点本身为静态页，文件托管于 GitHub Releases。如本地未配置仓库地址，按钮可能仍是占位符，点上面的「⚙ 配置仓库地址」填入你自己的 GitHub <code>用户名/仓库</code> 即可。</p>
+        </details>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container">
+        <p>
+          © <span id="yr"></span> 藏经阁 · 私人典籍 · 智能编修 ·
+          <a href="#download">下载</a> ·
+          <a href="#features">功能</a> ·
+          <a href="./CHANGELOG.md">更新日志</a> ·
+          <a href="#faq">FAQ</a>
+        </p>
+        <p style="font-size:.82rem;opacity:.7">
+          基于 Electron 31 · MIT License · Made with ☕ &amp; 朱砂印泥
+        </p>
+      </div>
+    </footer>
+
+    <!-- ====== JSON-LD: SoftwareApplication ====== -->
+    <script type="application/ld+json" id="ldjson">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "藏经阁",
+      "operatingSystem": "Windows 10, Windows 11",
+      "applicationCategory": "ProductivityApplication",
+      "softwareVersion": "1.0.31",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "description": "本地运行的 AI 内容工作台。文件库、AI 内容分析、智能文档生成、AI 修图、图标生成、金句库、历史与设置全链路打通。"
+    }
+    </script>
+
+    <!-- ====== 主逻辑：数据驱动 + 配置面板 ====== -->
+    <script>
+      // ============ 默认/兜底元数据（与 releases.json 同步） ============
+      const FALLBACK = {
+        version: "1.0.31",
+        platform: "win32-x64",
+        minOs: "Windows 10 / 11 (x64)",
+        downloads: {
+          installer: {
+            fileName: "藏经阁-Setup-1.0.31.exe",
+            sizeLabel: "108 MB",
+            sha256: "694b7d428a42b724baea6e6cd9b1612938dd152e4e9ff94645d98cb1f67a9374"
+          },
+          portable: {
+            fileName: "藏经阁-portable-1.0.31.zip",
+            sizeLabel: "155 MB",
+            sha256: "a738dc88d4a62e87e79debbb8b07e45a6a987c15217024d777d14b67b09f05e3"
+          }
+        }
+      };
+
+      const LS_KEY = "cangjingge.site.config";
+
+      function getStoredRepo() {
+        try {
+          const raw = localStorage.getItem(LS_KEY);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch { return null; }
+      }
+      function setStoredRepo(owner, repo) {
+        try { localStorage.setItem(LS_KEY, JSON.stringify({ owner, repo })); } catch {}
+      }
+
+      function parseGhParam() {
+        const m = location.search.match(/[?&]gh=([^&]+)/);
+        if (!m) return null;
+        const dec = decodeURIComponent(m[1]);
+        const parts = dec.split("/");
+        if (parts.length < 2) return null;
+        return { owner: parts[0], repo: parts[1] };
+      }
+
+      function isLocalHost() {
+        const h = location.hostname;
+        return (
+          h === "localhost" ||
+          h === "127.0.0.1" ||
+          h === "::1" ||
+          /^192\.168\./.test(h) ||
+          /^10\./.test(h) ||
+          /^172\.(1[6-9]|2\d|3[0-1])\./.test(h) ||
+          location.protocol === "file:"
+        );
+      }
+      function buildUrls(meta, repo) {
+        // 本地预览模式：使用同源 /dl/<文件名> 直链下载
+        if (isLocalHost()) {
+          return {
+            installer: `./dl/${encodeURIComponent(meta.downloads.installer.fileName)}`,
+            portable:  `./dl/${encodeURIComponent(meta.downloads.portable.fileName)}`,
+            repo:      repo && repo.owner && repo.repo ? `https://github.com/${repo.owner}/${repo.repo}` : "#",
+            configured: true,
+            mode: "local",
+          };
+        }
+        if (!repo || !repo.owner || !repo.repo) {
+          return { installer: "#", portable: "#", repo: "#", configured: false, mode: "github" };
+        }
+        const base = `https://github.com/${repo.owner}/${repo.repo}`;
+        return {
+          installer: `${base}/releases/latest/download/${encodeURIComponent(meta.downloads.installer.fileName)}`,
+          portable:  `${base}/releases/latest/download/${encodeURIComponent(meta.downloads.portable.fileName)}`,
+          repo:      base,
+          configured: true,
+          mode: "github",
+        };
+      }
+
+      function copyToClipboard(text) {
+        const t = String(text);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(t);
+        }
+        return new Promise((resolve, reject) => {
+          try {
+            const ta = document.createElement("textarea");
+            ta.value = t; document.body.appendChild(ta);
+            ta.select(); document.execCommand("copy");
+            document.body.removeChild(ta); resolve();
+          } catch (e) { reject(e); }
+        });
+      }
+      function showToast(msg) {
+        const t = document.createElement("div");
+        t.className = "toast"; t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 1800);
+      }
+
+      function applyMeta(meta) {
+        const v = "v" + meta.version;
+        document.getElementById("yr").textContent = new Date().getFullYear();
+        document.getElementById("metaVer").textContent = v;
+        document.getElementById("primaryVer").textContent = v;
+        document.getElementById("dlVer").textContent = v;
+        document.getElementById("hlBadgeVer").textContent = v;
+        document.getElementById("metaOs").textContent = meta.minOs;
+        document.getElementById("osLabel").textContent = meta.minOs;
+
+        document.getElementById("metaInstaller").textContent =
+          `${meta.downloads.installer.fileName} · ${meta.downloads.installer.sizeLabel}`;
+        document.getElementById("metaPortable").textContent =
+          `${meta.downloads.portable.fileName} · ${meta.downloads.portable.sizeLabel}`;
+
+        document.getElementById("shaInstaller").textContent = meta.downloads.installer.sha256;
+        document.getElementById("shaPortable").textContent  = meta.downloads.portable.sha256;
+
+        // 同步 JSON-LD 中的版本号
+        const ld = document.getElementById("ldjson");
+        try {
+          const obj = JSON.parse(ld.textContent);
+          obj.softwareVersion = meta.version;
+          ld.textContent = JSON.stringify(obj, null, 2);
+        } catch {}
+
+        // 同步 <title>
+        document.title = `藏经阁 ${v} · 私人典籍 · 智能编修`;
+      }
+
+      function applyUrls(urls) {
+        document.getElementById("dlInstaller").href = urls.installer;
+        document.getElementById("dlPortable").href = urls.portable;
+        document.getElementById("dlRepo").href = urls.repo;
+        document.getElementById("primaryDownload").href = urls.installer;
+        document.getElementById("navCta").href = urls.installer;
+
+        const banner = document.getElementById("configBanner");
+        banner.style.display = urls.configured ? "none" : "block";
+
+        // 本地模式提示条
+        let localBar = document.getElementById("localModeBar");
+        if (urls.mode === "local") {
+          if (!localBar) {
+            localBar = document.createElement("div");
+            localBar.id = "localModeBar";
+            localBar.style.cssText =
+              "background:linear-gradient(135deg,rgba(34,197,94,.18),rgba(99,102,241,.16));" +
+              "border-bottom:1px solid rgba(134,239,172,.4);padding:10px 24px;" +
+              "text-align:center;font-size:.88rem;color:#86efac";
+            localBar.innerHTML =
+              "🟢 <strong>本地预览模式</strong> — 下载按钮指向同机器上的 <code>release/</code> 真实产物；" +
+              "对外发布时把站点上传到 GitHub Pages，按钮会自动切到 GitHub Releases。";
+            document.body.insertBefore(localBar, document.body.firstChild);
+          }
+        } else if (localBar) {
+          localBar.remove();
+        }
+      }
+
+      // ===== 配置弹窗 =====
+      function openConfigModal() {
+        const cur = getStoredRepo() || { owner: "", repo: "" };
+        const back = document.createElement("div");
+        back.className = "modal-back";
+        back.innerHTML = `
+          <div class="modal" role="dialog" aria-modal="true">
+            <h3>⚙ 配置 GitHub 仓库</h3>
+            <p style="color:var(--text-soft);font-size:.92rem;margin:0">
+              下载按钮指向 <code>https://github.com/&lt;owner&gt;/&lt;repo&gt;/releases/latest/download/...</code>，
+              填一次后保存到本地浏览器。也可以用 <code>?gh=owner/repo</code> 一次性预置。
+            </p>
+            <label>用户名 / 组织</label>
+            <input id="cfgOwner" placeholder="例如：alice" value="${cur.owner || ""}" />
+            <label>仓库名</label>
+            <input id="cfgRepo" placeholder="例如：cangjingge" value="${cur.repo || ""}" />
+            <div class="hint">
+              提示：把构建产物（<code>藏经阁-Setup-${FALLBACK.version}.exe</code> 与 <code>藏经阁-portable-${FALLBACK.version}.zip</code>）
+              通过 <code>gh release create v${FALLBACK.version} ...</code> 上传到该仓库的 Releases，
+              这两个按钮就能直接下载到。
+            </div>
+            <div class="modal-actions">
+              <button class="btn btn-ghost" data-act="cancel" type="button" style="padding:8px 18px;font-size:.92rem">取消</button>
+              <button class="btn btn-primary" data-act="save" type="button" style="padding:8px 22px;font-size:.92rem">保存</button>
+            </div>
+          </div>`;
+        document.body.appendChild(back);
+        const close = () => back.remove();
+        back.addEventListener("click", (e) => { if (e.target === back) close(); });
+        back.querySelector('[data-act="cancel"]').addEventListener("click", close);
+        back.querySelector('[data-act="save"]').addEventListener("click", () => {
+          const o = back.querySelector("#cfgOwner").value.trim();
+          const r = back.querySelector("#cfgRepo").value.trim();
+          if (!o || !r) { showToast("请填写 owner 和 repo"); return; }
+          setStoredRepo(o, r);
+          applyUrls(buildUrls(window.__meta, { owner: o, repo: r }));
+          showToast("已保存。下载按钮已生效。");
+          close();
+        });
+        back.querySelector("#cfgOwner").focus();
+      }
+
+      // ============ 启动流程 ============
+      async function boot() {
+        // 1) 元数据：先 fetch releases.json，失败就用 FALLBACK
+        let meta = FALLBACK;
+        try {
+          const res = await fetch("./releases.json", { cache: "no-store" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.version && data.downloads) meta = data;
+          }
+        } catch {}
+        window.__meta = meta;
+        applyMeta(meta);
+
+        // 2) 仓库地址：?gh=... > localStorage > releases.json.github > 空
+        const urlRepo = parseGhParam();
+        const stored = getStoredRepo();
+        let repo = urlRepo || stored;
+        if (!repo && meta.github && meta.github.owner && meta.github.repo) {
+          repo = { owner: meta.github.owner, repo: meta.github.repo };
+        }
+        if (urlRepo) setStoredRepo(urlRepo.owner, urlRepo.repo);
+        applyUrls(buildUrls(meta, repo));
+
+        // 3) UA 提示
+        const ua = navigator.userAgent.toLowerCase();
+        if (!/windows/.test(ua)) {
+          const tip = document.createElement("div");
+          tip.style.cssText =
+            "max-width:580px;margin:18px auto 0;padding:10px 14px;background:rgba(99,102,241,.15);border:1px solid rgba(165,180,252,.35);border-radius:10px;color:#c7d2fe;font-size:.88rem;text-align:center";
+          tip.innerHTML = "检测到你似乎不在 Windows 上。当前仅提供 Windows 版安装包；如需跨平台，可走「源码版」自行 <code>npm start</code>。";
+          document.querySelector(".dl-card").appendChild(tip);
+        }
+
+        // 4) 绑定 SHA256 复制 & 配置入口
+        document.querySelectorAll(".sha-copy").forEach((b) => {
+          b.addEventListener("click", () => {
+            const k = b.getAttribute("data-copy");
+            const txt = (k === "installer" ? meta.downloads.installer.sha256 : meta.downloads.portable.sha256);
+            copyToClipboard(txt).then(() => showToast("SHA256 已复制")).catch(() => showToast("复制失败"));
+          });
+        });
+        document.getElementById("openConfigBtn").addEventListener("click", openConfigModal);
+        document.getElementById("openConfigBtn2").addEventListener("click", openConfigModal);
+      }
+
+      boot();
+    </script>
+  </body>
+</html>

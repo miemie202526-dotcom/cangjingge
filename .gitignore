@@ -1,0 +1,38 @@
+# 藏经阁 · Git 忽略（Mac/Windows 通用）
+
+node_modules/
+release/
+release-new/
+dist/
+out/
+*.log
+*.tmp
+
+# Electron / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# 构建缓存
+.cache/
+.parcel-cache/
+.electron-cache/
+.electron-builder-cache/
+.npm-cache/
+
+# 用户本地（勿提交）
+apikey.bin
+*.local.json
+
+# Windows 安装工具（体积大，可本机下载）
+nsis-3.0.4.1/
+
+# IDE
+.idea/
+.vscode/
+*.code-workspace
+
+# 环境变量
+.env
+.env.local

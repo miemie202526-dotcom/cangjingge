@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "_comment": "由 scripts/update-release-meta.js 自动维护；手动改也可以，但下次构建会被覆盖。",
+  "name": "藏经阁",
+  "tagline": "私人典籍 · 智能编修",
+  "version": "1.0.31",
+  "releaseDate": "2026-05-09",
+  "platform": "win32-x64",
+  "minOs": "Windows 10 / 11 (x64)",
+  "license": "MIT",
+  "github": {
+    "owner": "",
+    "repo": "",
+    "url": ""
+  },
+  "downloads": {
+    "installer": {
+      "fileName": "藏经阁-Setup-1.0.31.exe",
+      "sizeBytes": 113093097,
+      "sizeLabel": "108 MB",
+      "sha256": "694b7d428a42b724baea6e6cd9b1612938dd152e4e9ff94645d98cb1f67a9374",
+      "kind": "nsis",
+      "recommended": true
+    },
+    "portable": {
+      "fileName": "藏经阁-portable-1.0.31.zip",
+      "sizeBytes": 162033008,
+      "sizeLabel": "155 MB",
+      "sha256": "a738dc88d4a62e87e79debbb8b07e45a6a987c15217024d777d14b67b09f05e3",
+      "kind": "zip"
+    }
+  }
+}
