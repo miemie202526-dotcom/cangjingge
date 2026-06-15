@@ -36,6 +36,10 @@ function urlFor(fileName) {
   return new URL(fileName, baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`).href;
 }
 
+function firstExisting(fileNames) {
+  return fileNames.find((fileName) => fs.existsSync(path.join(releaseDir, fileName))) || fileNames[0];
+}
+
 function addDownload(downloads, key, fileName) {
   const fp = path.join(releaseDir, fileName);
   if (!fs.existsSync(fp)) return;
@@ -56,11 +60,18 @@ if (!fs.existsSync(releaseDir)) {
 
 const version = pkg.version;
 const downloads = {};
-addDownload(downloads, "darwin-arm64", `藏经阁-v${version}-Mac-arm64.zip`);
-addDownload(downloads, "mac", `藏经阁-v${version}-Mac-arm64.zip`);
+const macVersioned = firstExisting([
+  `Cangjingge-v${version}-Mac-arm64.zip`,
+  `藏经阁-v${version}-Mac-arm64.zip`,
+]);
+addDownload(downloads, "darwin-arm64", macVersioned);
+addDownload(downloads, "mac", macVersioned);
 addDownload(downloads, "latest", "Cangjingge-latest-Mac-arm64.zip");
 
-const winPortable = `藏经阁-v${version}-Windows-x64.zip`;
+const winPortable = firstExisting([
+  `Cangjingge-v${version}-Windows-x64.zip`,
+  `藏经阁-v${version}-Windows-x64.zip`,
+]);
 const winSetup = `藏经阁-Setup-v${version}.exe`;
 addDownload(downloads, "win32-x64", fs.existsSync(path.join(releaseDir, winSetup)) ? winSetup : winPortable);
 addDownload(downloads, "windows", fs.existsSync(path.join(releaseDir, winSetup)) ? winSetup : winPortable);

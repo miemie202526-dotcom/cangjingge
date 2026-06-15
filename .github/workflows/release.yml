@@ -45,15 +45,15 @@ jobs:
             exit 1
           fi
           codesign --force --deep --sign - "$APP_SRC"
-          ditto -c -k --sequesterRsrc --keepParent "$APP_SRC" "release/藏经阁-v${VERSION}-Mac-arm64.zip"
-          cp -f "release/藏经阁-v${VERSION}-Mac-arm64.zip" "release/Cangjingge-latest-Mac-arm64.zip"
-          shasum -a 256 "release/藏经阁-v${VERSION}-Mac-arm64.zip" > "release/Cangjingge-latest-Mac-arm64.sha256"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_SRC" "release/Cangjingge-v${VERSION}-Mac-arm64.zip"
+          cp -f "release/Cangjingge-v${VERSION}-Mac-arm64.zip" "release/Cangjingge-latest-Mac-arm64.zip"
+          shasum -a 256 "release/Cangjingge-v${VERSION}-Mac-arm64.zip" > "release/Cangjingge-latest-Mac-arm64.sha256"
 
       - uses: actions/upload-artifact@v4
         with:
           name: mac-arm64
           path: |
-            release/藏经阁-v*-Mac-arm64.zip
+            release/Cangjingge-v*-Mac-arm64.zip
             release/Cangjingge-latest-Mac-arm64.zip
             release/Cangjingge-latest-Mac-arm64.sha256
 
@@ -90,7 +90,7 @@ jobs:
           Remove-Item $stageRoot -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Path $stage | Out-Null
           Copy-Item "$src/*" $stage -Recurse -Force
-          $zip = "release/藏经阁-v$version-Windows-x64.zip"
+          $zip = "release/Cangjingge-v$version-Windows-x64.zip"
           $latest = "release/Cangjingge-latest-Windows-x64.zip"
           Compress-Archive -Path $stage -DestinationPath $zip -Force
           Copy-Item $zip $latest -Force
@@ -103,6 +103,7 @@ jobs:
           name: windows-x64
           path: |
             release/藏经阁-v*-Windows-x64.zip
+            release/Cangjingge-v*-Windows-x64.zip
             release/Cangjingge-latest-Windows-x64.zip
             release/Cangjingge-latest-Windows-x64.sha256
 
@@ -140,9 +141,11 @@ jobs:
           generate_release_notes: true
           files: |
             release/藏经阁-v*-Mac-arm64.zip
+            release/Cangjingge-v*-Mac-arm64.zip
             release/Cangjingge-latest-Mac-arm64.zip
             release/Cangjingge-latest-Mac-arm64.sha256
             release/藏经阁-v*-Windows-x64.zip
+            release/Cangjingge-v*-Windows-x64.zip
             release/Cangjingge-latest-Windows-x64.zip
             release/Cangjingge-latest-Windows-x64.sha256
             release/Cangjingge-latest.json
