@@ -3376,6 +3376,36 @@ body.theme-light .phCatCardAll .phCatTitle {
   opacity: 0.86;
 }
 
+.phCatActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.phCatAction {
+  appearance: none;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--pal-bd, var(--border)) 72%, var(--modern-jade, #24d2bd) 18%);
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--pal-fg, var(--text)) 74%, var(--text-strong));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 70%),
+    color-mix(in srgb, var(--pal-bg, var(--surface-soft)) 54%, transparent);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.phCatAction:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--modern-jade, #24d2bd) 58%, var(--pal-bd, var(--border)));
+  color: var(--text-strong);
+  box-shadow: 0 12px 28px -24px rgba(36, 210, 189, 0.7);
+}
+
 .phCatFoot {
   display: flex;
   align-items: flex-end;
@@ -5496,6 +5526,34 @@ body.theme-light .lib-brain-panel {
   overflow: hidden;
 }
 
+.library-vault-bar--compact {
+  display: flex;
+  min-height: 74px;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 10px;
+  padding: 14px 16px;
+}
+
+.library-vault-bar--compact h2 {
+  margin: 3px 0 0;
+  font-size: 1.02rem;
+  line-height: 1.25;
+}
+
+.library-vault-bar--compact .library-vault-kicker {
+  margin: 0;
+}
+
+.library-tools-drawer--compact > summary {
+  min-height: 42px;
+  padding: 8px 12px;
+}
+
+.library-tools-drawer--compact:not([open]) {
+  margin-bottom: 8px;
+}
+
 .library-tools-drawer > summary {
   display: flex;
   align-items: center;
@@ -5806,15 +5864,15 @@ body.theme-light .lib-brain-panel {
 
 #libSplit {
   position: relative;
-  grid-template-columns: minmax(760px, 1fr) minmax(320px, 0.34fr);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.28fr);
   gap: 12px;
   align-items: start;
   overflow-anchor: none;
 }
 
 #libTableWrap {
-  min-height: min(420px, calc(100vh - 300px));
-  max-height: calc(100vh - 250px);
+  min-height: min(560px, calc(100vh - 260px));
+  max-height: calc(100vh - 220px);
   overflow: auto;
   overflow-anchor: none;
 }
@@ -5827,8 +5885,8 @@ body.theme-light .lib-brain-panel {
 #libSplit.library-loading::before {
   content: "";
   position: absolute;
-  top: 92px;
-  right: 152px;
+  top: 78px;
+  right: 120px;
   z-index: 18;
   width: 34px;
   height: 34px;
@@ -5863,7 +5921,7 @@ body.theme-light .lib-brain-panel {
 }
 
 #libTable {
-  min-width: 1080px;
+  min-width: 760px;
   table-layout: fixed;
 }
 
@@ -5886,13 +5944,41 @@ body.theme-light .lib-brain-panel {
 }
 
 .lib-file-name-cell {
-  min-width: 280px;
-  width: 32%;
+  min-width: 360px;
   color: var(--text-strong);
   font-weight: 760;
   line-height: 1.45;
   word-break: break-word;
   overflow-wrap: anywhere;
+}
+
+.lib-file-title-line {
+  color: var(--text-strong);
+  font-size: 0.98rem;
+  font-weight: 900;
+  line-height: 1.38;
+}
+
+.lib-file-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.lib-file-meta-line span {
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 22px;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--modern-hairline, var(--border)) 74%, transparent);
+  border-radius: 999px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--modern-panel-2, var(--surface)) 70%, transparent);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .lib-file-size-cell {
@@ -5908,19 +5994,13 @@ body.theme-light .lib-brain-panel {
   line-height: 1.45;
 }
 
-.lib-file-summary-cell {
-  min-width: 360px;
-  line-height: 1.55;
-  color: color-mix(in srgb, var(--text) 88%, var(--muted));
-}
-
 .lib-file-action-cell {
-  width: 110px;
+  width: 120px;
   text-align: center;
 }
 
 #libTable tbody tr {
-  min-height: 78px;
+  min-height: 82px;
 }
 
 #libTable tbody tr:hover .lib-file-name-cell {
@@ -5933,18 +6013,14 @@ body.theme-light .lib-brain-panel {
 
 @media (min-width: 1500px) {
   #libSplit {
-    grid-template-columns: minmax(980px, 1fr) minmax(340px, 0.28fr);
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.24fr);
   }
 
   #libTable {
-    min-width: 1240px;
+    min-width: 820px;
   }
 
   .lib-file-name-cell {
-    min-width: 360px;
-  }
-
-  .lib-file-summary-cell {
     min-width: 460px;
   }
 }

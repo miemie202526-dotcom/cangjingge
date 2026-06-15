@@ -3,6 +3,9 @@ import * as historyStore from "../services/historyStore.js";
 import { el, loadingState, emptyState, errorState } from "../core/ui.js";
 import { createUndoController, buildUndoBarHtml } from "../core/undoController.js";
 
+const LIBRARY_READ_TIMEOUT_MS = 6_000;
+const LIBRARY_SYNC_TIMEOUT_MS = 10_000;
+
 /** @param {File} f */
 function fileToBase64(f) {
   return new Promise((resolve, reject) => {
@@ -33,6 +36,16 @@ function safeFilePart(text) {
     .replace(/[\\/:*?"<>|]/g, "_")
     .replace(/\s+/g, " ")
     .slice(0, 72);
+}
+
+function withTimeout(promise, ms, label) {
+  let timer = 0;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = window.setTimeout(() => reject(new Error(`${label}超时，请稍后点刷新重试`)), ms);
+    }),
+  ]).finally(() => window.clearTimeout(timer));
 }
 
 function escAttr(s) {
@@ -95,11 +108,10 @@ export function mountFileLibrary(root, ctx) {
         <input type="file" id="libFileInput" multiple style="display:none" />
       </div>
     </div>
-    <section class="library-vault-bar">
+    <section class="library-vault-bar library-vault-bar--compact">
       <div>
-        <div class="library-vault-kicker">真正的文件库</div>
-        <h2>资料管理中心</h2>
-        <p class="muted">默认只保留上传、搜索、筛选、列表、详情和阅读。高级 AI 能力收进工具箱，需要时再展开。</p>
+        <div class="library-vault-kicker">资料库总览</div>
+        <h2>集中管理所有文件、聊天记录和资料</h2>
       </div>
       <div class="library-vault-stats" id="libVaultStats">
         <span><b>0</b> 全部文件</span>
@@ -108,7 +120,7 @@ export function mountFileLibrary(root, ctx) {
         <span><b>0</b> 收藏</span>
       </div>
     </section>
-    <details class="library-tools-drawer" id="libToolsDrawer">
+    <details class="library-tools-drawer library-tools-drawer--compact" id="libToolsDrawer">
       <summary>
         <span>
           <strong>智能工具箱</strong>
@@ -349,7 +361,7 @@ export function mountFileLibrary(root, ctx) {
       <div>
         <div class="table-wrap" id="libTableWrap">
           <table class="data-table" id="libTable">
-            <thead><tr><th style="width:40px"><input type="checkbox" id="libCheckAll" /></th><th style="width:64px">${p.favToggle || ""}</th><th style="width:32%">${p.thFile || ""}</th><th style="width:110px">${p.thSize || ""}</th><th style="width:170px">${p.thUploaded || ""}</th><th>${p.thSummary || ""}</th><th style="width:110px">${p.thAction || "操作"}</th></tr></thead>
+            <thead><tr><th style="width:40px"><input type="checkbox" id="libCheckAll" /></th><th style="width:64px">${p.favToggle || ""}</th><th>${p.thFile || ""}</th><th style="width:120px">${p.thSize || ""}</th><th style="width:190px">${p.thUploaded || ""}</th><th style="width:120px">${p.thAction || "操作"}</th></tr></thead>
             <tbody id="libTbody"></tbody>
           </table>
         </div>
@@ -642,6 +654,7 @@ export function mountFileLibrary(root, ctx) {
     splitWrap.classList.toggle("library-loading", Boolean(active));
     if (active) {
       splitWrap.setAttribute("data-loading-message", message || p.loadingLabel || "加载文件库…");
+      updateSearchStatus(message || "正在加载文件库…");
     } else {
       splitWrap.removeAttribute("data-loading-message");
     }
@@ -1892,8 +1905,6 @@ export function mountFileLibrary(root, ctx) {
       if (rec.id === selectedId) tr.classList.add("selected");
       const sz = rec.bytes != null ? `${Number(rec.bytes).toLocaleString()} B` : "—";
       const time = rec.uploadedAt ? new Date(rec.uploadedAt).toLocaleString() : "—";
-      const sumFull = summaryLine(rec);
-      const sum = sumFull.slice(0, 80) + (sumFull.length > 80 ? "…" : "");
       const td0 = document.createElement("td");
       const cb = document.createElement("input");
       cb.type = "checkbox";
@@ -1919,16 +1930,25 @@ export function mountFileLibrary(root, ctx) {
       tdFav.appendChild(favBtn);
       const td1 = document.createElement("td");
       td1.className = "lib-file-name-cell";
-      td1.innerHTML = highlightHtmlOuter(rec.fileName || "", kws);
+      const type = extOf(rec).replace(/^\./, "").toUpperCase() || "FILE";
+      const metaBits = [
+        rec.category || inferLibraryCategory(rec) || "未分类",
+        Array.isArray(rec.tags) && rec.tags.length ? rec.tags.slice(0, 3).join(" / ") : "",
+        rec.priority ? `优先级 ${rec.priority}` : "",
+      ].filter(Boolean);
+      td1.innerHTML = `
+        <div class="lib-file-title-line">${highlightHtmlOuter(rec.fileName || "", kws)}</div>
+        <div class="lib-file-meta-line">
+          <span>${escHtmlOuter(type)}</span>
+          ${metaBits.map((bit) => `<span>${highlightHtmlOuter(bit, kws)}</span>`).join("")}
+        </div>
+      `;
       const td2 = document.createElement("td");
       td2.className = "lib-file-size-cell";
       td2.textContent = sz;
       const td3 = document.createElement("td");
       td3.className = "lib-file-time-cell";
       td3.textContent = time;
-      const td4 = document.createElement("td");
-      td4.className = "lib-file-summary-cell";
-      td4.innerHTML = highlightHtmlOuter(sum, kws);
       const td5 = document.createElement("td");
       td5.className = "lib-file-action-cell";
       const openBtn = document.createElement("button");
@@ -1940,7 +1960,7 @@ export function mountFileLibrary(root, ctx) {
         openInAppByRecord(rec);
       });
       td5.appendChild(openBtn);
-      tr.append(td0, tdFav, td1, td2, td3, td4, td5);
+      tr.append(td0, tdFav, td1, td2, td3, td5);
       tr.addEventListener("click", (ev) => {
         if (ev.target instanceof HTMLInputElement && ev.target.type === "checkbox") return;
         if ((/** @type {HTMLElement} */ (ev.target)).closest(".lib-fav-btn")) return;
@@ -2249,15 +2269,40 @@ export function mountFileLibrary(root, ctx) {
     }
   }
 
+  async function hydrateDiskLibrary(parentSerial) {
+    if (!ctx.ipc?.libraryList || !ctx.ipc?.libraryGetContent) return;
+    updateSearchStatus("本地库为空，正在后台检查磁盘资料…");
+    try {
+      await withTimeout(idb.syncLibraryIntoIdb(ctx.ipc), LIBRARY_SYNC_TIMEOUT_MS, "同步磁盘资料");
+      if (parentSerial !== reloadSerial) return;
+      const fresh = await withTimeout(idb.listFiles(), LIBRARY_READ_TIMEOUT_MS, "读取同步结果");
+      if (parentSerial !== reloadSerial) return;
+      if (Array.isArray(fresh) && fresh.length) {
+        items = fresh;
+        buildSearchIndex();
+        renderAll();
+        ctx.toast(`已同步 ${fresh.length} 个文件`);
+      } else {
+        updateSearchStatus("文件库为空，可上传或粘贴聊天记录");
+      }
+    } catch (e) {
+      if (parentSerial !== reloadSerial) return;
+      updateSearchStatus("本地库已可用；磁盘同步超时，可稍后点刷新");
+      console.warn("[library] background sync timeout", e);
+    }
+  }
+
   async function reload() {
     const serial = ++reloadSerial;
-    setLibraryLoading(true, p.loadingLabel || "加载文件库…");
+    setLibraryLoading(true, "读取本地文件库…");
     loadFailed = false;
     try {
-      items = await idb.listFiles();
-      if (!items.length) await idb.syncLibraryIntoIdb(ctx.ipc);
-      items = await idb.listFiles();
+      items = await withTimeout(idb.listFiles(), LIBRARY_READ_TIMEOUT_MS, "读取本地文件库");
+      if (serial !== reloadSerial) return;
       buildSearchIndex();
+      setLibraryLoading(false);
+      renderAll();
+      if (!items.length) void hydrateDiskLibrary(serial);
     } catch (e) {
       if (serial !== reloadSerial) return;
       loadFailed = true;
@@ -2266,8 +2311,6 @@ export function mountFileLibrary(root, ctx) {
         `${m?.messages?.libLoadFailed || ""} ${m?.messages?.libLoadRetry || ""}`.trim() || e?.message || "",
         true
       );
-    } finally {
-      if (serial !== reloadSerial) return;
       setLibraryLoading(false);
       renderAll();
     }

@@ -141,6 +141,7 @@ export async function mountPhrasebook(root, ctx) {
       </div>
       <div class="row" style="flex-wrap:wrap;gap:6px">
         <button type="button" class="btn btn-secondary btn-sm hidden" id="phBackToCats">← 返回分类</button>
+        <button type="button" class="btn btn-primary btn-sm" id="phNewProject" title="创建一个新的金句项目 / 分类">新建项目</button>
         <button type="button" class="btn btn-primary btn-sm" id="phAdd" title="新增单条金句（快捷键 N）">${escHtml(p.addBtn || "新增金句")}</button>
         <button type="button" class="btn btn-primary btn-sm" id="phBulk" title="一次粘贴多条金句（快捷键 B）">＋ 批量粘贴</button>
         <button type="button" class="btn btn-secondary btn-sm" id="phExportJson">${escHtml(p.exportBtn || "导出 JSON")}</button>
@@ -284,6 +285,7 @@ export async function mountPhrasebook(root, ctx) {
   const headTitle = root.querySelector("#phHeadTitle");
   const headSub = root.querySelector("#phHeadSub");
   const backBtn = root.querySelector("#phBackToCats");
+  const newProjectBtn = root.querySelector("#phNewProject");
   const search = root.querySelector("#phSearch");
   const sortSel = root.querySelector("#phSort");
   const onlyFav = root.querySelector("#phOnlyFav");
@@ -331,6 +333,64 @@ export async function mountPhrasebook(root, ctx) {
   /** @type {"grid"|"reader"} */
   let viewMode = "grid";
   let flashMode = false;
+  /** @type {string[]} */
+  let customCats = [];
+
+  function normalizeCategoryName(name) {
+    return String(name || "").trim().replace(/\s+/g, " ").slice(0, 48);
+  }
+
+  function allCategoryNames() {
+    const cats = new Set();
+    for (const c of presetCats) {
+      const name = normalizeCategoryName(c);
+      if (name) cats.add(name);
+    }
+    for (const c of customCats) {
+      const name = normalizeCategoryName(c);
+      if (name) cats.add(name);
+    }
+    for (const it of items) {
+      const name = normalizeCategoryName(it.category);
+      if (name) cats.add(name);
+    }
+    return [...cats].sort((a, b) => String(a).localeCompare(String(b), "zh-CN"));
+  }
+
+  async function saveCustomCategories(next) {
+    const normalized = [...new Set((next || []).map(normalizeCategoryName).filter(Boolean))];
+    customCats = normalized;
+    try {
+      await idb.storeSet("phrasebook.customCategories", normalized);
+    } catch {
+      // Empty project names are a convenience layer; phrase records remain the source of truth.
+    }
+  }
+
+  async function ensureCustomCategory(name) {
+    const normalized = normalizeCategoryName(name);
+    if (!normalized) return "";
+    if (!customCats.includes(normalized) && !presetCats.includes(normalized)) {
+      await saveCustomCategories([...customCats, normalized]);
+    }
+    return normalized;
+  }
+
+  async function createProject(prefill = "") {
+    const raw = window.prompt("新项目名称：\n例如：客户A话术 / 黄金交易 / 美国经济话题", prefill);
+    if (raw == null) return;
+    const name = normalizeCategoryName(raw);
+    if (!name) {
+      ctx.toast("项目名称不能为空", true);
+      return;
+    }
+    await ensureCustomCategory(name);
+    activeCategory = name;
+    activeTags.clear();
+    render();
+    openEditor({ category: name });
+    ctx.toast(`已创建项目「${name}」，可以开始添加金句`);
+  }
 
   function applyViewMode() {
     if (viewMode === "reader") {
@@ -548,11 +608,7 @@ export async function mountPhrasebook(root, ctx) {
   });
 
   function refreshCategoryDatalist() {
-    const cats = new Set();
-    for (const c of presetCats) cats.add(c);
-    for (const it of items) if (it.category) cats.add(String(it.category));
-    const sorted = [...cats].sort((a, b) => String(a).localeCompare(String(b), "zh-CN"));
-    categoryList.innerHTML = sorted.map((c) => `<option value="${escAttr(c)}"></option>`).join("");
+    categoryList.innerHTML = allCategoryNames().map((c) => `<option value="${escAttr(c)}"></option>`).join("");
   }
 
   function getKeywords() {
@@ -654,6 +710,7 @@ export async function mountPhrasebook(root, ctx) {
       .map((s) => s.trim())
       .filter(Boolean);
     try {
+      if (cat) await ensureCustomCategory(cat);
       for (const b of blocks) {
         await idb.putPhrase({
           text: b,
@@ -674,6 +731,10 @@ export async function mountPhrasebook(root, ctx) {
 
   async function reload() {
     try {
+      const savedCats = await idb.storeGet("phrasebook.customCategories");
+      customCats = Array.isArray(savedCats)
+        ? savedCats.map(normalizeCategoryName).filter(Boolean)
+        : [];
       items = await idb.listPhrases();
     } catch (e) {
       ctx.toast(`金句库加载失败：${e?.message || e}`, true);
@@ -862,7 +923,7 @@ export async function mountPhrasebook(root, ctx) {
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(it);
     }
-    for (const c of presetCats) if (!map.has(c)) map.set(c, []);
+    for (const c of allCategoryNames()) if (!map.has(c)) map.set(c, []);
 
     const cats = [...map.entries()].sort((a, b) => {
       const aFav = a[1].some((x) => x.favorite) ? 1 : 0;
@@ -873,7 +934,7 @@ export async function mountPhrasebook(root, ctx) {
 
     stat.textContent = `共 ${items.length} 条 · ${cats.length} 个分类`;
 
-    if (!filtered.length && !presetCats.length) {
+    if (!filtered.length && !allCategoryNames().length) {
       emptyState(emptyHost, p.empty || "暂无金句", p.emptyHint || "");
       return;
     }
@@ -922,10 +983,11 @@ export async function mountPhrasebook(root, ctx) {
       const pal = pickPalette(name);
       const sample = arr[0]?.text ? makeTitle(arr[0].text).head : "—";
       const hasItems = arr.length > 0;
+      const isCustom = customCats.includes(name);
       const watermarkChar = String(name || "—").trim().charAt(0) || "·";
       const card = el(`
         <div class="card phCatCard" data-cat="${escAttr(name)}" style="--pal-bd:${pal.bd};--pal-bg:${pal.bg};--pal-fg:${pal.fg}">
-          ${hasItems ? `<button type="button" class="phCatDel" title="删除整个分类「${escAttr(name)}」">×</button>` : ""}
+          ${(hasItems || isCustom) ? `<button type="button" class="phCatDel" title="删除项目「${escAttr(name)}」">×</button>` : ""}
           <span class="phCatWatermark" aria-hidden="true">${escHtml(watermarkChar)}</span>
           <div class="phCatHead">
             <span class="phCatStamp">分 类</span>
@@ -933,6 +995,10 @@ export async function mountPhrasebook(root, ctx) {
           </div>
           <div class="phCatTitle">${escHtml(name)}</div>
           <div class="phCatSample muted">${escHtml(sample)}</div>
+          <div class="phCatActions">
+            <button type="button" class="phCatAction" data-action="add">新增金句</button>
+            <button type="button" class="phCatAction" data-action="rename">改名</button>
+          </div>
           <div class="phCatFoot">
             <span class="phCatNum">${arr.length}</span>
             <span class="phCatUnit muted">条金句</span>
@@ -947,18 +1013,32 @@ export async function mountPhrasebook(root, ctx) {
       if (delBtn) {
         delBtn.addEventListener("click", async (e) => {
           e.stopPropagation();
-          if (!confirm(`确定删除整个分类「${name}」？\n该分类下共有 ${arr.length} 条金句，将一并删除。`)) return;
+          if (hasItems && !confirm(`确定删除整个项目「${name}」？\n该项目下共有 ${arr.length} 条金句，将一并删除。`)) return;
+          if (!hasItems && !confirm(`确定删除空项目「${name}」？`)) return;
           const snapshot = arr.map((it) => ({ ...it }));
           try {
             for (const it of arr) await idb.deletePhrase(it.id);
-            showUndo(snapshot, `已删除分类「${name}」（${arr.length} 条）`);
-            ctx.toast(`已删除分类「${name}」（15 秒内可撤销）`);
+            if (isCustom) await saveCustomCategories(customCats.filter((c) => c !== name));
+            if (snapshot.length) showUndo(snapshot, `已删除项目「${name}」（${arr.length} 条）`);
+            ctx.toast(hasItems ? `已删除项目「${name}」（15 秒内可撤销）` : `已删除空项目「${name}」`);
             await reload();
           } catch (err) {
             ctx.toast(err?.message || "删除失败", true);
           }
         });
       }
+      card.querySelector('[data-action="add"]')?.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        await ensureCustomCategory(name);
+        activeCategory = name;
+        activeTags.clear();
+        render();
+        openEditor({ category: name });
+      });
+      card.querySelector('[data-action="rename"]')?.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        await renameCategory(name);
+      });
       categoryGrid.appendChild(card);
     }
   }
@@ -1326,6 +1406,7 @@ export async function mountPhrasebook(root, ctx) {
     activeTags.clear();
     render();
   });
+  newProjectBtn.addEventListener("click", () => createProject());
   root.querySelector("#phAdd").addEventListener("click", () => {
     const prefill = activeCategory && activeCategory !== "__all__" ? { category: activeCategory } : null;
     openEditor(prefill);
@@ -1355,6 +1436,7 @@ export async function mountPhrasebook(root, ctx) {
       source: String(editorSource.value || "").trim(),
     };
     try {
+      if (payload.category) await ensureCustomCategory(payload.category);
       if (editingId) {
         await idb.patchPhrase(editingId, payload);
       } else {
@@ -1368,26 +1450,32 @@ export async function mountPhrasebook(root, ctx) {
     }
   });
 
-  // —— 重命名分类 ——
-  renameBtn.addEventListener("click", async () => {
-    if (renameBtn.disabled) return;
-    if (!activeCategory || activeCategory === "__all__") return;
-    const oldName = activeCategory;
+  async function renameCategory(oldName) {
+    if (!oldName || oldName === "__all__") return;
     const next = window.prompt(`把分类「${oldName}」重命名为：`, oldName);
     if (next == null) return;
-    const newName = String(next).trim();
+    const newName = normalizeCategoryName(next);
     if (!newName || newName === oldName) return;
     const affected = items.filter((it) => (String(it.category || "").trim() || UNCATEGORIZED) === oldName);
     try {
       for (const it of affected) {
         await idb.patchPhrase(it.id, { category: newName === UNCATEGORIZED ? "" : newName });
       }
+      const nextCats = customCats.map((c) => (c === oldName ? newName : c));
+      if (!nextCats.includes(newName) && !presetCats.includes(newName)) nextCats.push(newName);
+      await saveCustomCategories(nextCats.filter((c) => c !== oldName || c === newName));
       ctx.toast(`已将 ${affected.length} 条迁移到「${newName}」`);
       activeCategory = newName === UNCATEGORIZED ? UNCATEGORIZED : newName;
       await reload();
     } catch (e) {
       ctx.toast(e?.message || "重命名失败", true);
     }
+  }
+
+  // —— 重命名分类 ——
+  renameBtn.addEventListener("click", async () => {
+    if (renameBtn.disabled) return;
+    await renameCategory(activeCategory);
   });
 
   // —— 随机一句：从当前过滤结果里随机闪烁一张卡片 ——
