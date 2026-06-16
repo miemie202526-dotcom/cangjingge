@@ -317,6 +317,8 @@ export function mountFileLibrary(root, ctx) {
       </div>
       <div class="row library-reader-searchbar" style="margin-top:8px;gap:8px;align-items:center;flex-wrap:wrap">
         <button type="button" class="btn btn-primary btn-sm" id="libMainSaveMeta">保存标注与记忆</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="libMainArchiveSave" title="保存当前阅读位置">存档位置</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="libMainArchiveGo" title="跳回上次手动存档的位置">回到存档</button>
         <div id="libMainKwWrap" style="display:flex;align-items:center;gap:10px;flex:0 1 480px;min-width:260px;max-width:520px">
           <input class="inp" id="libMainKw" style="flex:1;min-width:0" placeholder="阅读器关键词（按 / 聚焦，回车跳转下一个）" />
           <div id="libMainHitNav" class="hidden kwHitNav">
@@ -1644,19 +1646,21 @@ export function mountFileLibrary(root, ctx) {
   }
 
   function buildReadCursor() {
-    if (mainPreviewKind !== "text") return null;
-    const total = Math.max(1, mainArticle.scrollHeight - mainArticle.clientHeight);
-    const ratio = Math.max(0, Math.min(1, mainArticle.scrollTop / total));
+    const host = mainEditMode ? mainTextEditor : mainPreviewKind === "native" ? mainNativeWrap : mainArticle;
+    if (!host) return null;
+    const mode = mainEditMode ? "edit" : mainPreviewKind === "native" ? "native" : "text";
+    const total = Math.max(1, host.scrollHeight - host.clientHeight);
+    const ratio = Math.max(0, Math.min(1, host.scrollTop / total));
     return {
-      mode: "text",
+      mode,
       ratio,
-      scrollTop: mainArticle.scrollTop,
+      scrollTop: host.scrollTop,
       updatedAt: Date.now(),
     };
   }
 
   async function persistReadCursor() {
-    if (!selectedId || mainPreviewKind !== "text") return;
+    if (!selectedId) return;
     const cursor = buildReadCursor();
     if (!cursor) return;
     const now = Date.now();
@@ -1669,15 +1673,17 @@ export function mountFileLibrary(root, ctx) {
     }
   }
 
-  function restoreReadCursor(rec) {
-    const c = rec?.readCursor;
-    if (!c || c.mode !== "text") return;
+  function restoreReadCursor(rec, { archiveOnly = false } = {}) {
+    const c = rec?.readArchive || (!archiveOnly ? rec?.readCursor : null);
+    if (!c) return false;
     const ratio = Number(c.ratio);
-    if (!Number.isFinite(ratio)) return;
+    if (!Number.isFinite(ratio)) return false;
     requestAnimationFrame(() => {
-      const total = Math.max(1, mainArticle.scrollHeight - mainArticle.clientHeight);
-      mainArticle.scrollTop = Math.max(0, Math.min(total, total * ratio));
+      const host = c.mode === "native" ? mainNativeWrap : c.mode === "edit" ? mainTextEditor : mainArticle;
+      const total = Math.max(1, host.scrollHeight - host.clientHeight);
+      host.scrollTop = Math.max(0, Math.min(total, total * ratio));
     });
+    return true;
   }
 
   function fillMainReader(rec) {
@@ -1691,6 +1697,13 @@ export function mountFileLibrary(root, ctx) {
     root.querySelector("#libMainPriority").value = rec.priority || "";
     root.querySelector("#libMainNote").value = rec.annotationNote || "";
     root.querySelector("#libMainMemory").value = rec.memoryNote || "";
+    const archiveBtn = root.querySelector("#libMainArchiveGo");
+    if (archiveBtn) {
+      archiveBtn.disabled = !rec.readArchive;
+      archiveBtn.title = rec.readArchive
+        ? `跳回存档：${new Date(rec.readArchive.updatedAt || Date.now()).toLocaleString()}`
+        : "还没有手动存档位置";
+    }
     mainBaseText = String(rec.content || "");
     const editable = canEditTextFile(rec);
     const editBtn = root.querySelector("#libMainEditText");
@@ -1726,6 +1739,7 @@ export function mountFileLibrary(root, ctx) {
         mainArticle.style.display = "none";
         mainNativeWrap.innerHTML = `<div style="text-align:center"><img src="${pv.dataUrl}" style="max-width:100%;height:auto;border-radius:10px" /></div>`;
         applyReaderViewPrefs();
+        restoreReadCursor(rec);
       } else if ((pv.kind === "pdf" || pv.kind === "html_url") && pv.url) {
         mainPreviewKind = "native";
         mainNativeWrap.classList.remove("hidden");
@@ -1734,6 +1748,7 @@ export function mountFileLibrary(root, ctx) {
         mainArticle.style.display = "none";
         mainNativeWrap.innerHTML = `<iframe src="${pv.url}" style="width:100%;height:calc(100vh - 380px);border:1px solid rgba(148,163,184,0.25);border-radius:10px;background:#fff"></iframe>`;
         applyReaderViewPrefs();
+        restoreReadCursor(rec);
       } else if (pv.kind === "spreadsheet_html" && typeof pv.sheets === "string") {
         mainPreviewKind = "native";
         mainNativeWrap.classList.remove("hidden");
@@ -1764,6 +1779,7 @@ export function mountFileLibrary(root, ctx) {
         mainNativeWrap.innerHTML = "";
         mainNativeWrap.appendChild(iframe);
         applyReaderViewPrefs();
+        restoreReadCursor(rec);
       } else if (pv.kind === "docx_html" && typeof pv.html === "string") {
         mainPreviewKind = "native";
         mainNativeWrap.classList.remove("hidden");
@@ -1801,6 +1817,7 @@ export function mountFileLibrary(root, ctx) {
         mainNativeWrap.innerHTML = "";
         mainNativeWrap.appendChild(iframe);
         applyReaderViewPrefs();
+        restoreReadCursor(rec);
       } else {
         mainPreviewKind = "text";
       }
@@ -2693,6 +2710,53 @@ export function mountFileLibrary(root, ctx) {
       else mainArticle.scrollTop = mainArticle.scrollTop;
     });
   });
+  root.querySelector("#libMainArchiveSave")?.addEventListener("click", async () => {
+    if (!selectedId) return;
+    const cursor = buildReadCursor();
+    if (!cursor) {
+      ctx.toast("当前阅读位置无法存档", true);
+      return;
+    }
+    try {
+      await idb.patchFile(selectedId, { readArchive: cursor, readCursor: cursor });
+      const rec = items.find((x) => x.id === selectedId);
+      if (rec) {
+        rec.readArchive = cursor;
+        rec.readCursor = cursor;
+        mainCurrentRecord = rec;
+      }
+      const btn = root.querySelector("#libMainArchiveGo");
+      if (btn) {
+        btn.disabled = false;
+        btn.title = `跳回存档：${new Date(cursor.updatedAt).toLocaleString()}`;
+      }
+      ctx.toast("阅读位置已存档");
+    } catch (e) {
+      ctx.toast(e?.message || "存档失败", true);
+    }
+  });
+  root.querySelector("#libMainArchiveGo")?.addEventListener("click", () => {
+    const rec = selectedRec();
+    if (!rec?.readArchive) {
+      ctx.toast("还没有存档位置", true);
+      return;
+    }
+    const mode = rec.readArchive.mode;
+    if (mode === "native") {
+      void loadNativePreview(rec).then(() => {
+        restoreReadCursor(rec, { archiveOnly: true });
+        ctx.toast("已回到上次存档位置");
+      });
+    } else if (mode === "edit" && canEditTextFile(rec)) {
+      setMainEditMode(true);
+      restoreReadCursor(rec, { archiveOnly: true });
+      ctx.toast("已回到上次存档位置");
+    } else {
+      ensureMainTextMode();
+      restoreReadCursor(rec, { archiveOnly: true });
+      ctx.toast("已回到上次存档位置");
+    }
+  });
   root.querySelector("#libReaderTextView")?.addEventListener("click", () => {
     ensureMainTextMode();
     applyReaderViewPrefs();
@@ -2932,6 +2996,12 @@ export function mountFileLibrary(root, ctx) {
     updateMainHitNavUi();
   });
   mainArticle.addEventListener("scroll", () => {
+    void persistReadCursor();
+  });
+  mainNativeWrap.addEventListener("scroll", () => {
+    void persistReadCursor();
+  });
+  mainTextEditor.addEventListener("scroll", () => {
     void persistReadCursor();
   });
 
