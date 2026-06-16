@@ -176,22 +176,77 @@ function escapeHtml(s) {
 function sheetToHtml(fp) {
   const xlsx = require("xlsx");
   const wb = xlsx.readFile(fp, { cellDates: true, cellStyles: true });
-  const sheetNames = wb.SheetNames.slice(0, 8);
+  const sheetNames = wb.SheetNames;
   const tabs = sheetNames
     .map((name, idx) => `<button type="button" data-sheet="${idx}" class="sheet-tab${idx === 0 ? " active" : ""}">${escapeHtml(name)}</button>`)
     .join("");
+  const mergeKey = (r, c) => `${r}:${c}`;
+  const colLabel = (idx) => {
+    let n = idx + 1;
+    let out = "";
+    while (n > 0) {
+      const rem = (n - 1) % 26;
+      out = String.fromCharCode(65 + rem) + out;
+      n = Math.floor((n - 1) / 26);
+    }
+    return out;
+  };
+  const cellStyle = (cell, colInfo) => {
+    const styles = [];
+    const width = Number(colInfo?.wch || 0);
+    if (Number.isFinite(width) && width > 0) styles.push(`min-width:${Math.min(Math.max(width * 8, 56), 320)}px`);
+    const s = cell?.s || {};
+    const fill = s.fill?.fgColor?.rgb || s.fill?.patternFill?.fgColor?.rgb;
+    if (fill && /^[0-9a-f]{6,8}$/i.test(fill)) styles.push(`background:#${fill.slice(-6)}`);
+    const color = s.font?.color?.rgb;
+    if (color && /^[0-9a-f]{6,8}$/i.test(color)) styles.push(`color:#${color.slice(-6)}`);
+    if (s.font?.bold) styles.push("font-weight:700");
+    if (s.font?.italic) styles.push("font-style:italic");
+    const align = s.alignment?.horizontal;
+    if (align) styles.push(`text-align:${align === "center" ? "center" : align === "right" ? "right" : "left"}`);
+    return styles.length ? ` style="${styles.join(";")}"` : "";
+  };
   const sheets = sheetNames
     .map((name, idx) => {
       const ws = wb.Sheets[name];
-      const rows = xlsx.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" }).slice(0, 250);
-      const maxCols = rows.reduce((n, row) => Math.max(n, Array.isArray(row) ? row.length : 0), 0);
-      const colHeads = Array.from({ length: maxCols }, (_, i) => `<th>${i + 1}</th>`).join("");
-      const body = rows
-        .map((row, rIdx) => {
-          const cells = Array.from({ length: maxCols }, (_, cIdx) => `<td>${escapeHtml(row?.[cIdx] ?? "")}</td>`).join("");
-          return `<tr><th>${rIdx + 1}</th>${cells}</tr>`;
-        })
-        .join("");
+      const ref = ws?.["!ref"];
+      if (!ref) {
+        return `<section class="sheet-page${idx === 0 ? " active" : ""}" data-sheet-page="${idx}"><div class="muted" style="padding:18px">空工作表</div></section>`;
+      }
+      const range = xlsx.utils.decode_range(ref);
+      const colCount = range.e.c - range.s.c + 1;
+      const merges = Array.isArray(ws["!merges"]) ? ws["!merges"] : [];
+      const skip = new Set();
+      const starts = new Map();
+      for (const m of merges) {
+        const rowSpan = m.e.r - m.s.r + 1;
+        const colSpan = m.e.c - m.s.c + 1;
+        starts.set(mergeKey(m.s.r, m.s.c), { rowSpan, colSpan });
+        for (let r = m.s.r; r <= m.e.r; r += 1) {
+          for (let c = m.s.c; c <= m.e.c; c += 1) {
+            if (r === m.s.r && c === m.s.c) continue;
+            skip.add(mergeKey(r, c));
+          }
+        }
+      }
+      const colHeads = Array.from({ length: colCount }, (_, i) => `<th>${colLabel(range.s.c + i)}</th>`).join("");
+      let body = "";
+      for (let r = range.s.r; r <= range.e.r; r += 1) {
+        let cells = "";
+        for (let c = range.s.c; c <= range.e.c; c += 1) {
+          if (skip.has(mergeKey(r, c))) continue;
+          const addr = xlsx.utils.encode_cell({ r, c });
+          const cell = ws[addr];
+          const merge = starts.get(mergeKey(r, c));
+          const attrs = [
+            merge?.rowSpan > 1 ? `rowspan="${merge.rowSpan}"` : "",
+            merge?.colSpan > 1 ? `colspan="${merge.colSpan}"` : "",
+            cellStyle(cell, ws["!cols"]?.[c]),
+          ].filter(Boolean).join(" ");
+          cells += `<td${attrs ? ` ${attrs}` : ""}>${escapeHtml(cell ? xlsx.utils.format_cell(cell) : "")}</td>`;
+        }
+        body += `<tr><th>${r + 1}</th>${cells}</tr>`;
+      }
       return `<section class="sheet-page${idx === 0 ? " active" : ""}" data-sheet-page="${idx}"><table><thead><tr><th></th>${colHeads}</tr></thead><tbody>${body}</tbody></table></section>`;
     })
     .join("");

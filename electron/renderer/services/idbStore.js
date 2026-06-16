@@ -307,6 +307,9 @@ export async function importBundledSeedOnce() {
   const seed = await loadBundledSeed();
   const seedId = String(seed?.seedId || "").trim();
   if (!seedId) return 0;
+  const oneTimeMarkerKey = "seed.imported.initialContent";
+  const oneTimeMarker = await getKv(oneTimeMarkerKey);
+  if (oneTimeMarker) return 0;
   const markerKey = `seed.imported.${seedId}`;
   const marker = await getKv(markerKey);
   if (marker) return 0;
@@ -314,6 +317,8 @@ export async function importBundledSeedOnce() {
   const now = Date.now();
   let fileCount = 0;
   let phraseCount = 0;
+  const importedFileOriginals = new Set((await listFiles()).map((x) => String(x.originalId || x.id || "")));
+  const importedPhraseOriginals = new Set((await listPhrases()).map((x) => String(x.originalId || x.id || "")));
 
   if (Array.isArray(seed.files)) {
     for (const rec of seed.files) {
@@ -321,7 +326,7 @@ export async function importBundledSeedOnce() {
       const id = seedScopedId(seedId, "file", rec.id);
       const existing = await getFile(id);
       const originalExisting = rec.id ? await getFile(rec.id) : null;
-      if (existing || originalExisting) continue;
+      if (existing || originalExisting || importedFileOriginals.has(String(rec.id || ""))) continue;
       await putFile(
         {
           ...rec,
@@ -335,6 +340,7 @@ export async function importBundledSeedOnce() {
         },
         { silent: true },
       );
+      importedFileOriginals.add(String(rec.id || id));
       fileCount += 1;
     }
   }
@@ -345,7 +351,7 @@ export async function importBundledSeedOnce() {
       const id = seedScopedId(seedId, "phrase", phrase.id);
       const existing = await getPhrase(id);
       const originalExisting = phrase.id ? await getPhrase(phrase.id) : null;
-      if (existing || originalExisting) continue;
+      if (existing || originalExisting || importedPhraseOriginals.has(String(phrase.id || ""))) continue;
       await putPhrase({
         ...phrase,
         id,
@@ -354,6 +360,7 @@ export async function importBundledSeedOnce() {
         seededAt: now,
         isOfficialSeed: true,
       });
+      importedPhraseOriginals.add(String(phrase.id || id));
       phraseCount += 1;
     }
   }
@@ -366,6 +373,12 @@ export async function importBundledSeedOnce() {
   }
 
   await setKv(markerKey, {
+    importedAt: now,
+    seedId,
+    files: fileCount,
+    phrases: phraseCount,
+  });
+  await setKv(oneTimeMarkerKey, {
     importedAt: now,
     seedId,
     files: fileCount,

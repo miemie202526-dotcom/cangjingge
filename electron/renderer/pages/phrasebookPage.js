@@ -382,13 +382,15 @@ export async function mountPhrasebook(root, ctx) {
     return normalized;
   }
 
-  function askTextDialog({ title, value = "", placeholder = "", okText = "保存" }) {
+  function askTextDialog({ title, value = "", placeholder = "", okText = "保存", multiline = false }) {
     return new Promise((resolve) => {
       const dlg = el(`
         <div class="phDialogBackdrop" role="dialog" aria-modal="true">
           <div class="phDialog">
             <h3>${escHtml(title || "输入内容")}</h3>
-            <input class="inp" id="phDialogInput" value="${escAttr(value)}" placeholder="${escAttr(placeholder)}" />
+            ${multiline
+              ? `<textarea class="inp" id="phDialogInput" rows="8" placeholder="${escAttr(placeholder)}">${escHtml(value)}</textarea>`
+              : `<input class="inp" id="phDialogInput" value="${escAttr(value)}" placeholder="${escAttr(placeholder)}" />`}
             <div class="phDialogActions">
               <button type="button" class="btn btn-ghost btn-sm" id="phDialogCancel">取消</button>
               <button type="button" class="btn btn-primary btn-sm" id="phDialogOk">${escHtml(okText)}</button>
@@ -408,7 +410,8 @@ export async function mountPhrasebook(root, ctx) {
         if (e.target === dlg) close(null);
       });
       input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") close(String(input.value || ""));
+        if (!multiline && e.key === "Enter") close(String(input.value || ""));
+        if (multiline && e.key === "Enter" && (e.metaKey || e.ctrlKey)) close(String(input.value || ""));
         if (e.key === "Escape") close(null);
       });
       window.setTimeout(() => {
@@ -1133,7 +1136,11 @@ export async function mountPhrasebook(root, ctx) {
 
     for (const [name, arr] of cats) {
       const pal = pickPalette(name);
-      const sample = arr[0]?.text ? makeTitle(arr[0].text).head : "—";
+      const titles = arr
+        .slice(0, 8)
+        .map((item) => makeTitle(item.text || "").head || String(item.text || "").slice(0, 36))
+        .filter(Boolean);
+      const sample = titles[0] || "—";
       const hasItems = arr.length > 0;
       const isCustom = customCats.includes(name);
       const watermarkChar = String(name || "—").trim().charAt(0) || "·";
@@ -1147,6 +1154,12 @@ export async function mountPhrasebook(root, ctx) {
           </div>
           <div class="phCatTitle">${escHtml(name)}</div>
           <div class="phCatSample muted">${escHtml(sample)}</div>
+          ${titles.length ? `
+            <div class="phCatTitleList" title="进入后查看全部标题">
+              ${titles.map((title, i) => `<div class="phCatTitleItem"><span>${i + 1}</span>${escHtml(title)}</div>`).join("")}
+              ${arr.length > titles.length ? `<div class="phCatTitleMore">还有 ${arr.length - titles.length} 条，点击进入查看</div>` : ""}
+            </div>
+          ` : `<div class="phCatTitleList phCatTitleListEmpty">暂无内容，点击新增金句</div>`}
           <div class="phCatActions">
             <button type="button" class="phCatAction" data-action="add">新增金句</button>
             <button type="button" class="phCatAction" data-action="rename">改名</button>
@@ -1310,7 +1323,8 @@ export async function mountPhrasebook(root, ctx) {
               <div class="phBlockText" style="font-size:1rem;line-height:1.85;white-space:pre-wrap;word-break:break-word;color:#e8edf5;user-select:text;cursor:text">${highlightHtml(block, keywords)}</div>
               <div class="row" style="gap:4px;flex-wrap:wrap;justify-content:flex-end">
                 <button type="button" class="btn btn-ghost btn-sm phBlockCopy" title="复制这一句" style="font-size:11px;padding:4px 8px">复制</button>
-                <button type="button" class="btn btn-ghost btn-sm phBlockSplit" title="拆出为单独金句" style="font-size:11px;padding:4px 8px">独立</button>
+                <button type="button" class="btn btn-ghost btn-sm phBlockEdit" title="编辑这一句" style="font-size:11px;padding:4px 8px">编辑</button>
+                <button type="button" class="btn btn-ghost btn-sm phBlockSplit" title="另存为单独金句" style="font-size:11px;padding:4px 8px">拆出</button>
                 <button type="button" class="btn btn-ghost btn-sm phBlockDel" title="删除这一句" style="font-size:11px;padding:4px 8px;color:#fecaca;border-color:rgba(248,113,113,0.45)">删除</button>
               </div>
             </li>`;
@@ -1319,7 +1333,7 @@ export async function mountPhrasebook(root, ctx) {
       bodyHtml = `
         <div class="muted" style="font-size:0.78rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span style="display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(96,165,250,0.18);color:#bfdbfe;border:1px solid rgba(96,165,250,0.4);font-size:11px;font-weight:600">${blocks.length} 句</span>
-          <span>每一句独立可复制 / 删除</span>
+          <span>每一句都可编辑、复制、拆出或删除</span>
         </div>
         <ol class="phBlocks" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px">${blockItems}</ol>
       `;
@@ -1456,6 +1470,7 @@ export async function mountPhrasebook(root, ctx) {
         const idx = parseInt(li.getAttribute("data-idx") || "0", 10);
         const block = blocks[idx - 1] || "";
         const copyBtn = li.querySelector(".phBlockCopy");
+        const editBtn = li.querySelector(".phBlockEdit");
         const splitBtn = li.querySelector(".phBlockSplit");
         const delBlockBtn = li.querySelector(".phBlockDel");
         li.addEventListener("mouseenter", () => {
@@ -1475,6 +1490,34 @@ export async function mountPhrasebook(root, ctx) {
             await reload();
           } else {
             ctx.toast("复制失败", true);
+          }
+        });
+        editBtn?.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const next = await askTextDialog({
+            title: `编辑第 ${idx} 句`,
+            value: block,
+            placeholder: "修改这一句的内容",
+            okText: "保存",
+            multiline: true,
+          });
+          if (next == null) return;
+          const clean = String(next || "").trim();
+          if (!clean) {
+            ctx.toast("内容不能为空", true);
+            return;
+          }
+          if (clean === block) return;
+          const snapshot = { ...rec };
+          try {
+            const nextBlocks = [...blocks];
+            nextBlocks[idx - 1] = clean;
+            await idb.patchPhrase(rec.id, { text: nextBlocks.join("\n\n"), updatedAt: Date.now() });
+            showUndo([snapshot], `已修改第 ${idx} 句`);
+            ctx.toast("已保存修改");
+            await reload();
+          } catch (err) {
+            ctx.toast(err?.message || "编辑失败", true);
           }
         });
         splitBtn?.addEventListener("click", async (e) => {

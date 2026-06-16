@@ -1296,6 +1296,76 @@ export function mountFileLibrary(root, ctx) {
     return String(rec?.fileName || rec?.title || "未命名文件").trim() || "未命名文件";
   }
 
+  function askFileTitleDialog(rec) {
+    return new Promise((resolve) => {
+      const current = visibleFileTitle(rec);
+      const dlg = el(`
+        <div class="phDialogBackdrop" role="dialog" aria-modal="true">
+          <div class="phDialog">
+            <h3>修改文件名称</h3>
+            <input class="inp" id="libRenameInput" maxlength="180" value="${escAttr(current)}" placeholder="输入新的文件名称" />
+            <div class="phDialogActions">
+              <button type="button" class="btn btn-ghost btn-sm" id="libRenameCancel">取消</button>
+              <button type="button" class="btn btn-primary btn-sm" id="libRenameOk">保存</button>
+            </div>
+          </div>
+        </div>
+      `);
+      root.appendChild(dlg);
+      const input = dlg.querySelector("#libRenameInput");
+      const close = (value) => {
+        dlg.remove();
+        resolve(value);
+      };
+      dlg.querySelector("#libRenameCancel")?.addEventListener("click", () => close(null));
+      dlg.querySelector("#libRenameOk")?.addEventListener("click", () => close(String(input.value || "")));
+      dlg.addEventListener("click", (ev) => {
+        if (ev.target === dlg) close(null);
+      });
+      input?.addEventListener("keydown", (ev) => {
+        if (ev.key === "Escape") close(null);
+        if (ev.key === "Enter") close(String(input.value || ""));
+      });
+      window.setTimeout(() => {
+        input?.focus();
+        input?.select();
+      }, 0);
+    });
+  }
+
+  async function applyFileTitle(rec, rawName, { refreshReader = false } = {}) {
+    if (!rec) return null;
+    const nextName = String(rawName || "").trim().replace(/[\\/]/g, "_").slice(0, 180);
+    const oldName = visibleFileTitle(rec);
+    if (!nextName || nextName === oldName) return { ...rec, fileName: oldName, title: oldName };
+    const patch = { fileName: nextName, title: nextName, editedAt: Date.now() };
+    await idb.patchFile(rec.id, patch);
+    try {
+      await ctx.ipc?.libraryUpdateMeta?.({ id: rec.id, patch });
+    } catch {
+      // 种子文件或旧记录可能没有主进程原文件，IDB 标题已保存。
+    }
+    const next = { ...rec, ...patch };
+    if (selectedId === rec.id) mainCurrentRecord = next;
+    await reload();
+    if (refreshReader && selectedId === rec.id) {
+      const fresh = items.find((x) => x.id === rec.id) || next;
+      fillMainReader({ ...fresh, ...patch });
+    }
+    return next;
+  }
+
+  async function renameFileFromList(rec) {
+    const next = await askFileTitleDialog(rec);
+    if (next == null) return;
+    try {
+      const changed = await applyFileTitle(rec, next, { refreshReader: rec.id === selectedId });
+      if (changed) ctx.toast("文件名已更新");
+    } catch (e) {
+      ctx.toast(e?.message || "改名失败", true);
+    }
+  }
+
   function canEditReadableContent(rec) {
     return Boolean(rec && typeof rec.content === "string");
   }
@@ -1321,18 +1391,8 @@ export function mountFileLibrary(root, ctx) {
       return;
     }
     try {
-      const patch = { fileName: nextName, title: nextName, editedAt: Date.now() };
-      await idb.patchFile(selectedId, patch);
-      try {
-        await ctx.ipc?.libraryUpdateMeta?.({ id: selectedId, patch });
-      } catch {
-        // 种子文件或旧记录可能没有主进程原文件，IDB 标题已保存。
-      }
-      mainCurrentRecord = { ...rec, ...patch };
+      await applyFileTitle(rec, nextName, { refreshReader: true });
       ctx.toast("标题已更新");
-      await reload();
-      const fresh = items.find((x) => x.id === selectedId) || mainCurrentRecord;
-      fillMainReader({ ...fresh, ...patch });
     } catch (e) {
       input.value = oldName;
       ctx.toast(e?.message || "标题保存失败", true);
@@ -1807,10 +1867,11 @@ export function mountFileLibrary(root, ctx) {
           .sheet-tab.active{background:#0f766e;color:#fff;border-color:#0f766e}
           .sheet-page{display:none;padding:12px;overflow:auto}.sheet-page.active{display:block}
           table{border-collapse:collapse;background:#fff;min-width:100%;box-shadow:0 1px 0 #e2e8f0}
-          th{position:sticky;top:50px;background:#eef2f7;color:#475569;font-size:12px;z-index:2}
+          th{position:sticky;top:48px;background:#eef2f7;color:#475569;font-size:12px;z-index:2}
           th:first-child{left:0;z-index:3}
-          td,th{border:1px solid #dbe4ee;padding:7px 9px;min-width:92px;max-width:360px;white-space:pre-wrap;vertical-align:top}
-          td{font-size:13px;line-height:1.45}
+          td,th{border:1px solid #dbe4ee;padding:7px 9px;min-width:92px;max-width:460px;white-space:pre-wrap;vertical-align:top}
+          td{font-size:13px;line-height:1.45;background:#fff}
+          tbody tr:hover td{background:#f8fbff}
         </style></head><body><div class="tabs">${pv.tabs || ""}</div>${pv.sheets || ""}<script>
           document.querySelectorAll('.sheet-tab').forEach(btn=>btn.addEventListener('click',()=>{
             document.querySelectorAll('.sheet-tab').forEach(x=>x.classList.remove('active'));
@@ -2065,21 +2126,28 @@ export function mountFileLibrary(root, ctx) {
           <label style="position:absolute;top:8px;right:8px;display:flex;align-items:center;gap:4px;font-size:11px;color:#94a3b8;cursor:pointer" title="勾选用于批量操作">
             <input type="checkbox" class="lib-cb lib-card-cb" data-id="${escAttr(rec.id)}" />
           </label>
-          <div style="font-weight:600;font-size:0.9rem;word-break:break-all;padding-right:28px">${highlightHtmlOuter(rec.fileName || "", kws)}</div>
+          <div class="lib-file-title-row" style="padding-right:28px">
+            <div class="lib-file-title-line">${highlightHtmlOuter(rec.fileName || "", kws)}</div>
+            <button type="button" class="btn btn-ghost btn-xs libRenameFile" title="修改文件名称">改名</button>
+          </div>
           <div class="muted" style="font-size:0.75rem;margin-top:6px">${highlightHtmlOuter(sumShort, kws)}</div>
           <div class="muted" style="font-size:0.72rem;margin-top:8px">${rec.uploadedAt ? new Date(rec.uploadedAt).toLocaleString() : ""}</div>
         </div>
       `);
+      card.querySelector(".libRenameFile")?.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        void renameFileFromList(rec);
+      });
       card.addEventListener("click", (ev) => {
         const t = /** @type {HTMLElement} */ (ev.target);
-        if (t.closest("input") || t.closest("label")) return;
+        if (t.closest("input") || t.closest("label") || t.closest("button")) return;
         selectedId = rec.id;
         renderAll();
         showDetailLocal(rec);
       });
       card.addEventListener("dblclick", (ev) => {
         const t = /** @type {HTMLElement} */ (ev.target);
-        if (t.closest("input") || t.closest("label")) return;
+        if (t.closest("input") || t.closest("label") || t.closest("button")) return;
         openInAppByRecord(rec);
       });
       if (rec.id === selectedId) card.classList.add("selected");
@@ -2136,12 +2204,19 @@ export function mountFileLibrary(root, ctx) {
         rec.priority ? `优先级 ${rec.priority}` : "",
       ].filter(Boolean);
       td1.innerHTML = `
-        <div class="lib-file-title-line">${highlightHtmlOuter(rec.fileName || "", kws)}</div>
+        <div class="lib-file-title-row">
+          <div class="lib-file-title-line">${highlightHtmlOuter(rec.fileName || "", kws)}</div>
+          <button type="button" class="btn btn-ghost btn-xs libRenameFile" title="修改文件名称">改名</button>
+        </div>
         <div class="lib-file-meta-line">
           <span>${escHtmlOuter(type)}</span>
           ${metaBits.map((bit) => `<span>${highlightHtmlOuter(bit, kws)}</span>`).join("")}
         </div>
       `;
+      td1.querySelector(".libRenameFile")?.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        void renameFileFromList(rec);
+      });
       const td2 = document.createElement("td");
       td2.className = "lib-file-size-cell";
       td2.textContent = sz;
@@ -2162,7 +2237,7 @@ export function mountFileLibrary(root, ctx) {
       tr.append(td0, tdFav, td1, td2, td3, td5);
       tr.addEventListener("click", (ev) => {
         if (ev.target instanceof HTMLInputElement && ev.target.type === "checkbox") return;
-        if ((/** @type {HTMLElement} */ (ev.target)).closest(".lib-fav-btn")) return;
+        if ((/** @type {HTMLElement} */ (ev.target)).closest(".lib-fav-btn,.libRenameFile")) return;
         selectedId = rec.id;
         renderAll();
         showDetailLocal(rec);
