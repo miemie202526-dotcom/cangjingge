@@ -975,6 +975,13 @@ app.whenReady().then(() => {
     return libraryStore.getPreview(id, key);
   });
 
+  ipcMain.handle("library-save-text-content", async (_event, payload) => {
+    const { id, text, apiKey } = payload || {};
+    if (!id) throw new Error("缺少 id。");
+    const key = resolveApiKey(apiKey);
+    return libraryStore.saveTextContent(id, String(text ?? ""), key);
+  });
+
   createWindow();
 
   app.on("activate", () => {

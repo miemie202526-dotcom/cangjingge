@@ -29,6 +29,7 @@ const VIEW_OPTIONS = [
 const LIGHT_THEMES = new Set(["light", "paper", "ocean"]);
 const THEME_CLASS_NAMES = ["theme-dark", "theme-light", ...THEME_OPTIONS.map((x) => `theme-${x.value}`)];
 const VIEW_CLASS_NAMES = VIEW_OPTIONS.map((x) => `view-${x.value}`);
+const CHROME_FOCUS_KEY = "cangjingge.chromeFocus.v1";
 const PAGE_ICON_LABELS = {
   dashboard: "⌘",
   library: "▦",
@@ -82,6 +83,29 @@ function applyViewMode(mode) {
   body.dataset.view = viewValue;
   const sel = document.getElementById("headerViewMode");
   if (sel) sel.value = viewValue;
+}
+
+function applyChromeFocusMode(on) {
+  const active = Boolean(on);
+  document.body.classList.toggle("chrome-focus-mode", active);
+  const btn = document.getElementById("headerFocusChromeBtn");
+  if (btn) {
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+    btn.setAttribute("title", active ? "恢复顶部与侧边栏" : "收起顶部与侧边栏，扩大阅读空间");
+    const label = btn.querySelector("b");
+    const icon = btn.querySelector("span");
+    if (label) label.textContent = active ? "恢复" : "专注";
+    if (icon) icon.textContent = active ? "⤡" : "⤢";
+  }
+  try {
+    localStorage.setItem(CHROME_FOCUS_KEY, active ? "1" : "0");
+  } catch {
+    // ignore
+  }
+}
+
+function toggleChromeFocusMode() {
+  applyChromeFocusMode(!document.body.classList.contains("chrome-focus-mode"));
 }
 
 function navigate(page, payload) {
@@ -187,6 +211,7 @@ function buildCtx(root) {
     saveSettings,
     applyTheme,
     applyViewMode,
+    applyChromeFocusMode,
     emitLibraryChanged: () => {
       window.dispatchEvent(new CustomEvent("ai-pro-library-changed"));
       window.dispatchEvent(new CustomEvent(idb.STORE_CHANGED_EVENT));
@@ -559,6 +584,13 @@ async function bootstrap() {
     });
   }
   applyViewMode(VIEW_OPTIONS.some((x) => x.value === st.viewMode) ? st.viewMode : "standard");
+  const focusBtn = document.getElementById("headerFocusChromeBtn");
+  focusBtn?.addEventListener("click", toggleChromeFocusMode);
+  try {
+    applyChromeFocusMode(localStorage.getItem(CHROME_FOCUS_KEY) === "1");
+  } catch {
+    applyChromeFocusMode(false);
+  }
   setupCommandPalette();
 
   const navRoot = document.getElementById("sidebarNav");

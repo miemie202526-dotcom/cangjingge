@@ -280,21 +280,28 @@ export function mountFileLibrary(root, ctx) {
       <button type="button" class="btn btn-ghost btn-sm" id="libRefresh">${p.refresh || ""}</button>
     </div>
     <div id="libMainReader" class="card hidden" style="display:none;min-height:calc(100vh - 120px);padding:14px 16px">
-      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+      <div class="row library-reader-topline" style="justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap">
         <div>
           <h2 id="libMainTitle" style="margin:0;font-size:1.18rem">项目内阅读器</h2>
           <p id="libMainMeta" class="muted" style="margin:6px 0 0;font-size:0.8rem"></p>
         </div>
-        <button type="button" class="btn btn-secondary btn-sm" id="libMainBack">返回文件列表</button>
+        <div class="row" style="gap:8px;align-items:center">
+          <button type="button" class="btn btn-secondary btn-sm" id="libMainFocusToggle">收起栏</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="libMainBack">返回文件列表</button>
+        </div>
       </div>
-      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <div class="row library-reader-secondary" style="gap:8px;flex-wrap:wrap;margin-bottom:8px">
         <button type="button" class="btn btn-secondary btn-sm" id="libMainToAnalysis">发送到 AI 分析</button>
         <button type="button" class="btn btn-secondary btn-sm" id="libMainToGen">发送到文件生成</button>
         <button type="button" class="btn btn-secondary btn-sm" id="libMainCopy">复制全文</button>
         <button type="button" class="btn btn-secondary btn-sm" id="libMainOpenOs">系统打开</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="libMainEditText">编辑正文</button>
+        <button type="button" class="btn btn-primary btn-sm hidden" id="libMainSaveText" style="display:none">保存修改</button>
+        <button type="button" class="btn btn-ghost btn-sm hidden" id="libMainCancelEdit" style="display:none">取消编辑</button>
         <button type="button" class="btn btn-primary btn-sm" id="libMainSavePhrase" title="保存当前选中文本或命中句到金句库">保存到金句库</button>
+        <span class="muted" id="libMainEditStatus" style="font-size:0.74rem"></span>
       </div>
-      <div class="library-reader-controls">
+      <div class="library-reader-controls library-reader-secondary">
         <span class="muted">阅读视图</span>
         <button type="button" class="btn btn-secondary btn-sm" id="libReaderTextView">文本阅读</button>
         <button type="button" class="btn btn-secondary btn-sm" id="libReaderNativeView">原始预览</button>
@@ -308,7 +315,7 @@ export function mountFileLibrary(root, ctx) {
         </select>
         <button type="button" class="btn btn-secondary btn-sm" id="libReaderTop">回到顶部</button>
       </div>
-      <div class="row" style="margin-top:8px;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="row library-reader-searchbar" style="margin-top:8px;gap:8px;align-items:center;flex-wrap:wrap">
         <button type="button" class="btn btn-primary btn-sm" id="libMainSaveMeta">保存标注与记忆</button>
         <div id="libMainKwWrap" style="display:flex;align-items:center;gap:10px;flex:0 1 480px;min-width:260px;max-width:520px">
           <input class="inp" id="libMainKw" style="flex:1;min-width:0" placeholder="阅读器关键词（按 / 聚焦，回车跳转下一个）" />
@@ -326,6 +333,7 @@ export function mountFileLibrary(root, ctx) {
       <div id="libMainHitList" class="preview-box hidden" style="margin-top:8px;padding:8px;max-height:120px;overflow:auto"></div>
       <div id="libMainNativeWrap" class="preview-box hidden" style="display:none;margin-top:10px;min-height:calc(100vh - 355px);max-height:calc(100vh - 355px);overflow:auto;padding:10px"></div>
       <div id="libMainArticle" class="preview-box" style="margin-top:10px;min-height:calc(100vh - 355px);max-height:calc(100vh - 355px);overflow:auto;padding:18px 20px;line-height:1.9;font-size:15px"></div>
+      <textarea id="libMainTextEditor" class="inp hidden" spellcheck="false" style="display:none;margin-top:10px;min-height:calc(100vh - 355px);max-height:calc(100vh - 355px);resize:none;font-family:Consolas,Menlo,monospace;line-height:1.75"></textarea>
       <div style="position:sticky;bottom:12px;display:flex;justify-content:flex-end;gap:8px;z-index:8">
         <button type="button" class="btn btn-secondary btn-sm" id="libMainPrevFloat" style="box-shadow:0 10px 24px rgba(2,6,23,0.35)">上一个</button>
         <button type="button" class="btn btn-primary btn-sm" id="libMainNextFloat" style="box-shadow:0 10px 24px rgba(2,6,23,0.35)">下一个</button>
@@ -467,6 +475,8 @@ export function mountFileLibrary(root, ctx) {
   const mainStat = root.querySelector("#libMainStat");
   const mainDebug = root.querySelector("#libMainDebug");
   const mainHitList = root.querySelector("#libMainHitList");
+  const mainTextEditor = root.querySelector("#libMainTextEditor");
+  const mainEditStatus = root.querySelector("#libMainEditStatus");
   const readerFontStat = root.querySelector("#libReaderFontStat");
   const readerWidth = root.querySelector("#libReaderWidth");
   const qaScope = root.querySelector("#libQaScope");
@@ -560,6 +570,9 @@ export function mountFileLibrary(root, ctx) {
   let mainMatchIdx = -1;
   let mainBaseText = "";
   let mainPreviewKind = "text";
+  let readerChromeCollapsed = false;
+  let mainEditMode = false;
+  let mainEditOriginalText = "";
   let lastReadSaveAt = 0;
   let activeSearchQuery = "";
   let searchDebounceTimer = 0;
@@ -580,6 +593,12 @@ export function mountFileLibrary(root, ctx) {
 
   function extOf(rec) {
     return String(rec.ext || "").toLowerCase();
+  }
+
+  const EDITABLE_TEXT_EXTS = new Set([".txt", ".md", ".csv", ".json", ".xml", ".html", ".htm", ".log"]);
+
+  function canEditTextFile(rec) {
+    return EDITABLE_TEXT_EXTS.has(extOf(rec));
   }
 
   function normalizeQuery(s) {
@@ -1438,6 +1457,57 @@ export function mountFileLibrary(root, ctx) {
     }
   }
 
+  function setReaderChromeCollapsed(on) {
+    readerChromeCollapsed = Boolean(on);
+    mainReader?.classList.toggle("reader-chrome-collapsed", readerChromeCollapsed);
+    document.body.classList.toggle("library-reader-focus", readerChromeCollapsed);
+    const btn = root.querySelector("#libMainFocusToggle");
+    if (btn) btn.textContent = readerChromeCollapsed ? "恢复栏" : "收起栏";
+    if (ctx.applyChromeFocusMode) ctx.applyChromeFocusMode(readerChromeCollapsed);
+  }
+
+  function setMainEditMode(on) {
+    mainEditMode = Boolean(on);
+    const saveBtn = root.querySelector("#libMainSaveText");
+    const cancelBtn = root.querySelector("#libMainCancelEdit");
+    const editBtn = root.querySelector("#libMainEditText");
+    if (mainEditMode) {
+      mainEditOriginalText = String(mainBaseText || "");
+      mainTextEditor.value = mainEditOriginalText;
+      mainTextEditor.classList.remove("hidden");
+      mainTextEditor.style.display = "block";
+      mainArticle.classList.add("hidden");
+      mainArticle.style.display = "none";
+      mainNativeWrap.classList.add("hidden");
+      mainNativeWrap.style.display = "none";
+      if (saveBtn) {
+        saveBtn.classList.remove("hidden");
+        saveBtn.style.display = "";
+      }
+      if (cancelBtn) {
+        cancelBtn.classList.remove("hidden");
+        cancelBtn.style.display = "";
+      }
+      if (editBtn) editBtn.textContent = "正在编辑";
+      if (mainEditStatus) mainEditStatus.textContent = "正在编辑本地副本";
+      requestAnimationFrame(() => mainTextEditor.focus());
+    } else {
+      mainTextEditor.classList.add("hidden");
+      mainTextEditor.style.display = "none";
+      if (saveBtn) {
+        saveBtn.classList.add("hidden");
+        saveBtn.style.display = "none";
+      }
+      if (cancelBtn) {
+        cancelBtn.classList.add("hidden");
+        cancelBtn.style.display = "none";
+      }
+      if (editBtn) editBtn.textContent = "编辑正文";
+      if (mainEditStatus) mainEditStatus.textContent = "";
+      ensureMainTextMode();
+    }
+  }
+
   function applyReaderViewPrefs() {
     if (readerFontStat) readerFontStat.textContent = `${readerFontSize}px`;
     if (readerWidth) readerWidth.value = readerWidthMode;
@@ -1446,6 +1516,7 @@ export function mountFileLibrary(root, ctx) {
     mainArticle.style.fontSize = `${readerFontSize}px`;
     mainArticle.style.lineHeight = readerFontSize >= 20 ? "1.78" : "1.9";
     mainNativeWrap.style.fontSize = `${readerFontSize}px`;
+    mainTextEditor.style.fontSize = `${readerFontSize}px`;
     try {
       localStorage.setItem("cangjingge.library.readerFont", String(readerFontSize));
       localStorage.setItem("cangjingge.library.readerWidth", readerWidthMode);
@@ -1611,6 +1682,7 @@ export function mountFileLibrary(root, ctx) {
 
   function fillMainReader(rec) {
     if (!rec) return;
+    if (mainEditMode) setMainEditMode(false);
     mainCurrentRecord = rec;
     root.querySelector("#libMainTitle").textContent = rec.fileName || "项目内阅读器";
     root.querySelector("#libMainMeta").textContent = `扩展名 ${extOf(rec) || "—"} · 字符 ${rec.charCount ?? "—"} · 行 ${rec.lineCount ?? "—"} · 分类 ${rec.category || "未分类"} · 优先级 ${rec.priority || "未设置"}`;
@@ -1620,6 +1692,13 @@ export function mountFileLibrary(root, ctx) {
     root.querySelector("#libMainNote").value = rec.annotationNote || "";
     root.querySelector("#libMainMemory").value = rec.memoryNote || "";
     mainBaseText = String(rec.content || "");
+    const editable = canEditTextFile(rec);
+    const editBtn = root.querySelector("#libMainEditText");
+    if (editBtn) {
+      editBtn.disabled = !editable;
+      editBtn.title = editable ? "直接编辑并保存这份文本类文件" : "此格式请用原始预览或系统打开编辑；软件内可保存标注与记忆";
+    }
+    if (mainEditStatus) mainEditStatus.textContent = editable ? "" : "此格式支持原始预览与标注；正文编辑请系统打开";
     mainPreviewKind = "text";
     mainNativeWrap.innerHTML = "";
     mainNativeWrap.classList.add("hidden");
@@ -1635,6 +1714,7 @@ export function mountFileLibrary(root, ctx) {
 
   async function loadNativePreview(rec) {
     if (!rec?.id) return;
+    if (mainEditMode) setMainEditMode(false);
     try {
       const pv = await ctx.ipc.libraryGetPreview({ id: rec.id, apiKey: ctx.getApiKey() });
       if (!pv || !pv.kind) return;
@@ -1653,6 +1733,36 @@ export function mountFileLibrary(root, ctx) {
         mainArticle.classList.add("hidden");
         mainArticle.style.display = "none";
         mainNativeWrap.innerHTML = `<iframe src="${pv.url}" style="width:100%;height:calc(100vh - 380px);border:1px solid rgba(148,163,184,0.25);border-radius:10px;background:#fff"></iframe>`;
+        applyReaderViewPrefs();
+      } else if (pv.kind === "spreadsheet_html" && typeof pv.sheets === "string") {
+        mainPreviewKind = "native";
+        mainNativeWrap.classList.remove("hidden");
+        mainNativeWrap.style.display = "block";
+        mainArticle.classList.add("hidden");
+        mainArticle.style.display = "none";
+        const iframe = document.createElement("iframe");
+        iframe.className = "lib-native-frame";
+        iframe.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>
+          body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',Arial,sans-serif;background:#f8fafc;color:#0f172a}
+          .tabs{position:sticky;top:0;display:flex;gap:8px;padding:10px;border-bottom:1px solid #dbe4ee;background:#fff;z-index:5}
+          .sheet-tab{border:1px solid #cbd5e1;border-radius:999px;background:#fff;padding:6px 12px;font-weight:800;cursor:pointer}
+          .sheet-tab.active{background:#0f766e;color:#fff;border-color:#0f766e}
+          .sheet-page{display:none;padding:12px;overflow:auto}.sheet-page.active{display:block}
+          table{border-collapse:collapse;background:#fff;min-width:100%;box-shadow:0 1px 0 #e2e8f0}
+          th{position:sticky;top:50px;background:#eef2f7;color:#475569;font-size:12px;z-index:2}
+          th:first-child{left:0;z-index:3}
+          td,th{border:1px solid #dbe4ee;padding:7px 9px;min-width:92px;max-width:360px;white-space:pre-wrap;vertical-align:top}
+          td{font-size:13px;line-height:1.45}
+        </style></head><body><div class="tabs">${pv.tabs || ""}</div>${pv.sheets || ""}<script>
+          document.querySelectorAll('.sheet-tab').forEach(btn=>btn.addEventListener('click',()=>{
+            document.querySelectorAll('.sheet-tab').forEach(x=>x.classList.remove('active'));
+            document.querySelectorAll('.sheet-page').forEach(x=>x.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelector('[data-sheet-page="'+btn.dataset.sheet+'"]')?.classList.add('active');
+          }));
+        </script></body></html>`;
+        mainNativeWrap.innerHTML = "";
+        mainNativeWrap.appendChild(iframe);
         applyReaderViewPrefs();
       } else if (pv.kind === "docx_html" && typeof pv.html === "string") {
         mainPreviewKind = "native";
@@ -1731,10 +1841,13 @@ export function mountFileLibrary(root, ctx) {
   }
 
   function ensureMainTextMode() {
+    if (mainEditMode) setMainEditMode(false);
     if (mainPreviewKind === "text") return;
     mainPreviewKind = "text";
     mainNativeWrap.classList.add("hidden");
     mainNativeWrap.style.display = "none";
+    mainTextEditor.classList.add("hidden");
+    mainTextEditor.style.display = "none";
     mainArticle.classList.remove("hidden");
     mainArticle.style.display = "block";
   }
@@ -2570,7 +2683,15 @@ export function mountFileLibrary(root, ctx) {
 
   root.querySelector("#libMainBack").addEventListener("click", () => {
     void persistReadCursor();
+    if (readerChromeCollapsed) setReaderChromeCollapsed(false);
     toggleMainReader(false);
+  });
+  root.querySelector("#libMainFocusToggle")?.addEventListener("click", () => {
+    setReaderChromeCollapsed(!readerChromeCollapsed);
+    requestAnimationFrame(() => {
+      if (mainPreviewKind === "native") mainNativeWrap.scrollTop = mainNativeWrap.scrollTop;
+      else mainArticle.scrollTop = mainArticle.scrollTop;
+    });
   });
   root.querySelector("#libReaderTextView")?.addEventListener("click", () => {
     ensureMainTextMode();
@@ -2616,6 +2737,43 @@ export function mountFileLibrary(root, ctx) {
       ctx.toast("全文已复制");
     } catch (e) {
       ctx.toast(e?.message || "复制失败", true);
+    }
+  });
+  root.querySelector("#libMainEditText")?.addEventListener("click", () => {
+    const rec = selectedRec();
+    if (!rec) return;
+    if (!canEditTextFile(rec)) {
+      ctx.toast("这个格式不适合在软件内直接改正文；可用系统打开编辑，或在下方保存标注与记忆。", true);
+      return;
+    }
+    setMainEditMode(true);
+  });
+  root.querySelector("#libMainCancelEdit")?.addEventListener("click", () => {
+    mainBaseText = mainEditOriginalText;
+    setMainEditMode(false);
+    renderMainArticle();
+    ctx.toast("已取消编辑");
+  });
+  root.querySelector("#libMainSaveText")?.addEventListener("click", async () => {
+    if (!selectedId) return;
+    const rec = selectedRec();
+    if (!rec || !canEditTextFile(rec)) {
+      ctx.toast("此文件格式暂不支持直接保存正文", true);
+      return;
+    }
+    const text = String(mainTextEditor.value || "");
+    try {
+      const r = await ctx.ipc.librarySaveTextContent({ id: selectedId, text, apiKey: ctx.getApiKey() });
+      await persistFromLibraryResult(r);
+      mainBaseText = text;
+      setMainEditMode(false);
+      ctx.toast("正文修改已保存到本地文件库");
+      ctx.emitLibraryChanged();
+      await reload();
+      const fresh = items.find((x) => x.id === selectedId) || { ...rec, content: text };
+      fillMainReader({ ...fresh, content: text });
+    } catch (e) {
+      ctx.toast(e?.message || "保存正文失败", true);
     }
   });
   root.querySelector("#libMainSavePhrase").addEventListener("click", () => {

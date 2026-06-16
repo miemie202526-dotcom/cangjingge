@@ -664,6 +664,32 @@ body.theme-light .project-input {
   outline: none;
 }
 
+.hdr-focus-btn {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border: 1px solid color-mix(in srgb, var(--modern-jade, #24d2bd) 38%, var(--border));
+  border-radius: 999px;
+  color: var(--text-strong);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--modern-jade, #24d2bd) 14%, transparent), transparent),
+    rgba(255, 255, 255, 0.04);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.14s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.hdr-focus-btn:hover,
+.hdr-focus-btn:focus-visible {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--modern-jade, #24d2bd) 72%, var(--border));
+  outline: none;
+}
+
 body.theme-light .hdr-select {
   background: #fff;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 1), 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -719,6 +745,42 @@ body.theme-light .hdr-badge.muted {
   inset: 0;
   overflow: hidden;
   animation: none;
+}
+
+body.chrome-focus-mode .app-layout {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+body.chrome-focus-mode .sidebar {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-18px);
+}
+
+body.chrome-focus-mode .top-header {
+  position: fixed;
+  top: 10px;
+  right: 14px;
+  z-index: 90;
+  width: auto;
+  min-height: 0;
+  padding: 6px;
+  gap: 0;
+  border-radius: 999px;
+}
+
+body.chrome-focus-mode .top-header > :not(#headerFocusChromeBtn) {
+  display: none !important;
+}
+
+body.chrome-focus-mode .hdr-focus-btn {
+  min-height: 34px;
+  padding: 6px 12px;
+  box-shadow: 0 16px 36px -22px rgba(0, 0, 0, 0.55);
+}
+
+body.chrome-focus-mode .main-area {
+  gap: 0;
 }
 
 .page.active {
@@ -6145,6 +6207,37 @@ body.theme-light .lib-brain-panel {
   border-radius: 18px !important;
 }
 
+#libMainReader.reader-chrome-collapsed {
+  min-height: calc(100vh - 22px) !important;
+  padding: 10px 12px !important;
+}
+
+#libMainReader.reader-chrome-collapsed .library-reader-secondary {
+  display: none !important;
+}
+
+#libMainReader.reader-chrome-collapsed .library-reader-topline {
+  margin-bottom: 4px !important;
+  padding-right: 78px;
+}
+
+#libMainReader.reader-chrome-collapsed #libMainTitle {
+  font-size: 0.96rem !important;
+  max-width: min(720px, 70vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#libMainReader.reader-chrome-collapsed #libMainMeta {
+  display: none;
+}
+
+#libMainReader.reader-chrome-collapsed .library-reader-searchbar {
+  margin-top: 2px !important;
+  padding: 6px 0 4px;
+}
+
 .library-reader-controls {
   margin: 8px 0 10px;
   padding: 9px;
@@ -6154,10 +6247,18 @@ body.theme-light .lib-brain-panel {
 }
 
 #libMainArticle,
-#libMainNativeWrap {
+#libMainNativeWrap,
+#libMainTextEditor {
   min-height: calc(100vh - 300px) !important;
   max-height: calc(100vh - 300px) !important;
   border-radius: 14px !important;
+}
+
+#libMainReader.reader-chrome-collapsed #libMainArticle,
+#libMainReader.reader-chrome-collapsed #libMainNativeWrap,
+#libMainReader.reader-chrome-collapsed #libMainTextEditor {
+  min-height: calc(100vh - 142px) !important;
+  max-height: calc(100vh - 142px) !important;
 }
 
 #libMainArticle {
@@ -6165,6 +6266,27 @@ body.theme-light .lib-brain-panel {
   margin-left: auto;
   margin-right: auto;
   padding: clamp(18px, 2vw, 30px) !important;
+}
+
+#libMainTextEditor {
+  width: 100%;
+  padding: clamp(18px, 2vw, 30px) !important;
+  color: var(--text-strong);
+  background: color-mix(in srgb, var(--modern-panel-2, var(--surface)) 88%, transparent);
+}
+
+.lib-native-frame,
+#libMainNativeWrap iframe {
+  width: 100% !important;
+  height: calc(100vh - 320px) !important;
+  border: 1px solid rgba(148, 163, 184, 0.25) !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+}
+
+#libMainReader.reader-chrome-collapsed .lib-native-frame,
+#libMainReader.reader-chrome-collapsed #libMainNativeWrap iframe {
+  height: calc(100vh - 160px) !important;
 }
 
 #libMainReader.reader-width-comfortable #libMainArticle {

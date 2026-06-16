@@ -34,5 +34,6 @@ contextBridge.exposeInMainWorld("aiDesktop", {
   libraryUpdateTags: (payload) => ipcRenderer.invoke("library-update-tags", payload),
   libraryOpenOriginal: (payload) => ipcRenderer.invoke("library-open-original", payload),
   libraryGetPreview: (payload) => ipcRenderer.invoke("library-get-preview", payload),
+  librarySaveTextContent: (payload) => ipcRenderer.invoke("library-save-text-content", payload),
   saveBufferDialog: (payload) => ipcRenderer.invoke("save-buffer-dialog", payload),
 });
