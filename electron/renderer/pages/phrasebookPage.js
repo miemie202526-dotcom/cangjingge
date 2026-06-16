@@ -167,6 +167,7 @@ export async function mountPhrasebook(root, ctx) {
           <button type="button" class="phHitBtn" id="phHitNext" title="下一个 (Enter)" aria-label="下一个">↓</button>
           <button type="button" class="phHitBtn phHitBtnClose" id="phHitClose" title="清除搜索" aria-label="清除">×</button>
         </div>
+        <button type="button" class="phHitDrawerToggle hidden" id="phHitDrawerToggle" title="展开全部命中句" aria-expanded="false">↓ 命中</button>
       </div>
       <select class="inp" style="max-width:200px" id="phSort">
         <option value="recent">${escHtml(p.sortRecent || "排序：最近更新")}</option>
@@ -180,6 +181,8 @@ export async function mountPhrasebook(root, ctx) {
       </label>
       <span id="phStat" class="muted" style="font-size:0.78rem;margin-left:auto"></span>
     </div>
+
+    <div id="phSearchDrawer" class="phSearchDrawer hidden"></div>
 
     <div id="phTagBar" class="hidden" style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;align-items:center"></div>
 
@@ -291,6 +294,8 @@ export async function mountPhrasebook(root, ctx) {
   const onlyFav = root.querySelector("#phOnlyFav");
   const stat = root.querySelector("#phStat");
   const tagBar = root.querySelector("#phTagBar");
+  const hitDrawerToggle = root.querySelector("#phHitDrawerToggle");
+  const searchDrawer = root.querySelector("#phSearchDrawer");
 
   const undoBar = root.querySelector("#phUndoBar");
   const undoMsg = root.querySelector("#phUndoMsg");
@@ -333,6 +338,7 @@ export async function mountPhrasebook(root, ctx) {
   /** @type {"grid"|"reader"} */
   let viewMode = "grid";
   let flashMode = false;
+  let hitDrawerOpen = false;
   /** @type {string[]} */
   let customCats = [];
 
@@ -806,6 +812,110 @@ export async function mountPhrasebook(root, ctx) {
     return q.split(/\s+/).filter(Boolean).every((t) => hay.includes(t));
   }
 
+  function recordCategory(rec) {
+    return String(rec?.category || "").trim() || UNCATEGORIZED;
+  }
+
+  function activeScopeRecords() {
+    if (activeCategory == null || activeCategory === "__all__") return items;
+    return items.filter((it) => recordCategory(it) === activeCategory);
+  }
+
+  function phraseSentences(text) {
+    const blocks = splitBlocks(text);
+    const pieces = [];
+    for (const block of blocks) {
+      const parts = String(block || "")
+        .split(/(?<=[。！？!?；;])\s*|\n+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      pieces.push(...(parts.length ? parts : [block]));
+    }
+    return pieces.filter(Boolean);
+  }
+
+  function collectSearchRows(limit = 80) {
+    const keywords = getKeywords();
+    if (!keywords.length) return [];
+    const lowered = keywords.map((k) => k.toLowerCase());
+    const rows = [];
+    const scoped = activeScopeRecords()
+      .filter(matchesSearch)
+      .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+
+    for (const rec of scoped) {
+      const sentences = phraseSentences(rec.text || "");
+      const hits = sentences.filter((s) => {
+        const low = s.toLowerCase();
+        return lowered.some((k) => low.includes(k));
+      });
+      const use = (hits.length ? hits : sentences.slice(0, 1)).slice(0, 3);
+      for (const sentence of use) {
+        rows.push({ rec, sentence });
+        if (rows.length >= limit) return rows;
+      }
+    }
+    return rows;
+  }
+
+  function scrollToPhraseCard(id) {
+    requestAnimationFrame(() => {
+      const card = [...list.querySelectorAll(".phCard")].find((node) => node.getAttribute("data-id") === id);
+      if (!card) return;
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      card.classList.add("phSearchJump");
+      setTimeout(() => card.classList.remove("phSearchJump"), 1500);
+    });
+  }
+
+  function renderSearchDrawer() {
+    if (!searchDrawer || !hitDrawerToggle) return;
+    const q = String(search.value || "").trim();
+    const rows = collectSearchRows();
+    const hasRows = Boolean(q && rows.length);
+    hitDrawerToggle.classList.toggle("hidden", !hasRows);
+    hitDrawerToggle.setAttribute("aria-expanded", hitDrawerOpen && hasRows ? "true" : "false");
+    hitDrawerToggle.textContent = hitDrawerOpen && hasRows ? `↑ 收起 ${rows.length}` : `↓ 命中 ${rows.length}`;
+
+    if (!hasRows || !hitDrawerOpen) {
+      searchDrawer.classList.add("hidden");
+      searchDrawer.innerHTML = "";
+      return;
+    }
+
+    const keywords = getKeywords();
+    searchDrawer.classList.remove("hidden");
+    searchDrawer.innerHTML = `
+      <div class="phSearchDrawerHead">
+        <strong>相关命中句</strong>
+        <span>共 ${rows.length} 条 · 点击句子定位到所属分类</span>
+      </div>
+      <div class="phSearchDrawerList">
+        ${rows
+          .map(({ rec, sentence }, i) => {
+            const cat = recordCategory(rec);
+            return `
+              <button type="button" class="phSearchDrawerItem" data-ph-result-key="${escAttr(rec.id)}">
+                <span class="phSearchDrawerIndex">${i + 1}</span>
+                <span class="phSearchDrawerText">${highlightHtml(sentence, keywords)}</span>
+                <span class="phSearchDrawerCat">${escHtml(cat)}</span>
+              </button>`;
+          })
+          .join("")}
+      </div>`;
+    searchDrawer.querySelectorAll("[data-ph-result-key]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-ph-result-key");
+        const rec = items.find((it) => it.id === id);
+        if (!rec) return;
+        activeCategory = recordCategory(rec);
+        hitDrawerOpen = false;
+        render();
+        scrollToPhraseCard(id);
+      });
+    });
+  }
+
   function setHeadingForView() {
     if (activeCategory) {
       const display = activeCategory === "__all__" ? "全部分类" : activeCategory;
@@ -881,6 +991,7 @@ export async function mountPhrasebook(root, ctx) {
       renderPhraseList();
     }
     refreshHitNav();
+    renderSearchDrawer();
   }
 
   // —— 关键词跳转 / 上下条命中 ——
@@ -1542,7 +1653,10 @@ export async function mountPhrasebook(root, ctx) {
     }, 1600);
   });
 
-  search.addEventListener("input", render);
+  search.addEventListener("input", () => {
+    if (!String(search.value || "").trim()) hitDrawerOpen = false;
+    render();
+  });
   search.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       if (!hitMarks.length) return;
@@ -1554,8 +1668,13 @@ export async function mountPhrasebook(root, ctx) {
   root.querySelector("#phHitPrev")?.addEventListener("click", () => gotoNextHit(-1));
   root.querySelector("#phHitClose")?.addEventListener("click", () => {
     search.value = "";
+    hitDrawerOpen = false;
     render();
     search.focus();
+  });
+  hitDrawerToggle?.addEventListener("click", () => {
+    hitDrawerOpen = !hitDrawerOpen;
+    renderSearchDrawer();
   });
   sortSel.addEventListener("change", render);
   onlyFav.addEventListener("change", render);
@@ -1609,6 +1728,7 @@ export async function mountPhrasebook(root, ctx) {
     if (e.key === "Escape") {
       if (!editor.classList.contains("hidden")) { closeEditor(); e.preventDefault(); return; }
       if (!bulkPanel.classList.contains("hidden")) { closeBulk(); e.preventDefault(); return; }
+      if (hitDrawerOpen) { hitDrawerOpen = false; renderSearchDrawer(); e.preventDefault(); return; }
       if (activeCategory != null) { activeCategory = null; activeTags.clear(); render(); e.preventDefault(); return; }
       return;
     }

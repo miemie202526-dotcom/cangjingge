@@ -8620,6 +8620,351 @@ body.view-compact .settings-card {
   padding: 12px !important;
 }
 
+/* —— v1.1.8 Focus Vault: compress controls, enlarge reading surface —— */
+#page-library .page-inner,
+#page-phrasebook .page-inner {
+  padding-top: 8px !important;
+}
+
+.library-page-head {
+  grid-template-columns: minmax(135px, 0.42fr) minmax(220px, 0.74fr) auto !important;
+  gap: 8px !important;
+  margin-bottom: 6px !important;
+  padding: 7px 9px !important;
+  border: 1px solid color-mix(in srgb, var(--pro-line) 84%, transparent) !important;
+  border-radius: 14px !important;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--pro-accent-2) 8%, transparent), transparent 56%),
+    color-mix(in srgb, var(--pro-panel) 78%, transparent) !important;
+  box-shadow: 0 12px 30px -26px rgba(0, 0, 0, 0.42) !important;
+}
+
+.library-page-head .page-title {
+  font-size: 1.03rem !important;
+  line-height: 1.12 !important;
+}
+
+.library-page-head .page-sub {
+  display: none !important;
+}
+
+.library-page-head .row {
+  justify-content: flex-end !important;
+  gap: 6px !important;
+}
+
+.library-page-head .btn {
+  min-height: 30px !important;
+  padding: 5px 9px !important;
+  font-size: 0.72rem !important;
+  white-space: nowrap;
+}
+
+.library-vault-stats {
+  gap: 4px !important;
+}
+
+.library-vault-stats span {
+  min-height: 26px !important;
+  padding: 3px 8px !important;
+  font-size: 0.66rem !important;
+}
+
+.library-vault-stats b {
+  font-size: 0.78rem !important;
+}
+
+.library-toolbar {
+  top: 46px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-bottom: 8px !important;
+  padding: 6px !important;
+  border-radius: 12px !important;
+}
+
+.library-toolbar #libSearchWrap {
+  flex: 1 1 360px !important;
+  max-width: none !important;
+}
+
+.library-toolbar .inp,
+.library-toolbar .btn,
+.library-toolbar .list-pager {
+  min-height: 32px !important;
+  font-size: 0.75rem !important;
+}
+
+.library-toolbar .inp,
+.library-toolbar .btn {
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
+}
+
+.library-search-status {
+  display: none !important;
+}
+
+#libSplit {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.24fr) !important;
+  gap: 10px !important;
+}
+
+#libTableWrap {
+  min-height: min(760px, calc(100vh - 174px)) !important;
+  max-height: calc(100vh - 148px) !important;
+}
+
+#libTableWrap .data-table tbody td {
+  padding-top: 13px !important;
+  padding-bottom: 13px !important;
+}
+
+#libDetail {
+  max-height: calc(100vh - 152px) !important;
+}
+
+#phStickyHead {
+  padding: 5px 8px 7px !important;
+  margin: -6px -4px 6px !important;
+  border: 1px solid color-mix(in srgb, var(--pro-line) 80%, transparent) !important;
+  border-radius: 14px !important;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--pro-accent-2) 9%, transparent), transparent 62%),
+    color-mix(in srgb, var(--pro-panel) 88%, transparent) !important;
+  box-shadow:
+    0 16px 38px -34px rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+#phStickyHead > .page-head {
+  display: grid !important;
+  grid-template-columns: minmax(140px, 0.48fr) minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-bottom: 5px !important;
+}
+
+#phHeadTitle {
+  overflow: hidden;
+  font-size: 1.08rem !important;
+  line-height: 1.15 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#phHeadSub {
+  display: none !important;
+}
+
+#phStickyHead > .page-head .row {
+  justify-content: flex-end !important;
+  gap: 5px !important;
+  overflow-x: auto;
+  flex-wrap: nowrap !important;
+}
+
+#phStickyHead .btn {
+  min-height: 30px !important;
+  padding: 5px 9px !important;
+  font-size: 0.72rem !important;
+  white-space: nowrap;
+}
+
+#phStickyHead .toolbar {
+  gap: 6px !important;
+  padding: 6px !important;
+  overflow-x: auto;
+  flex-wrap: nowrap !important;
+  border-radius: 12px !important;
+}
+
+#phSearchWrap {
+  flex: 1 0 360px !important;
+  max-width: none !important;
+  gap: 6px !important;
+}
+
+#phSearch {
+  min-height: 34px !important;
+  padding: 6px 10px !important;
+  font-size: 0.82rem !important;
+}
+
+#phSort {
+  max-width: 170px !important;
+  min-height: 34px !important;
+  font-size: 0.78rem !important;
+}
+
+#phStat {
+  margin-left: 0 !important;
+  white-space: nowrap;
+}
+
+#phTagBar {
+  max-height: 31px;
+  margin-top: 5px !important;
+  overflow: auto;
+}
+
+#phCatHeader {
+  margin-top: 6px !important;
+  padding: 7px 10px !important;
+  gap: 8px !important;
+}
+
+#phCatHeaderInner {
+  gap: 8px !important;
+}
+
+#phCatHeaderInner [style*="height:44px"] {
+  height: 28px !important;
+}
+
+#phCatHeaderInner [style*="font-size:1.4rem"] {
+  font-size: 1rem !important;
+}
+
+#phCategoryGrid,
+#phList {
+  margin-top: 6px !important;
+}
+
+.phHitNav,
+.kwHitNav {
+  min-height: 32px !important;
+  padding: 4px 5px 4px 10px !important;
+}
+
+.phHitCount,
+.kwHitCount {
+  min-width: 52px !important;
+  font-size: 0.82rem !important;
+}
+
+.phHitDrawerToggle {
+  appearance: none;
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in srgb, var(--pro-accent-2) 40%, var(--pro-line));
+  border-radius: 10px;
+  color: var(--pro-text);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--pro-accent-2) 14%, transparent), transparent 70%),
+    var(--pro-panel-2);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 850;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.phHitDrawerToggle:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--pro-accent-2) 62%, var(--pro-line));
+}
+
+.phSearchDrawer {
+  margin-top: 6px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--pro-accent-2) 24%, var(--pro-line));
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--pro-accent-2) 8%, transparent), transparent 60%),
+    color-mix(in srgb, var(--pro-elevated) 92%, transparent);
+}
+
+.phSearchDrawerHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  color: var(--pro-muted);
+  font-size: 0.72rem;
+}
+
+.phSearchDrawerHead strong {
+  color: var(--pro-text);
+  font-size: 0.82rem;
+}
+
+.phSearchDrawerList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 6px;
+  max-height: min(250px, 32vh);
+  overflow: auto;
+}
+
+.phSearchDrawerItem {
+  appearance: none;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 7px 9px;
+  border: 1px solid color-mix(in srgb, var(--pro-line) 84%, transparent);
+  border-radius: 10px;
+  color: var(--pro-text);
+  background: color-mix(in srgb, var(--pro-panel-2) 82%, transparent);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.phSearchDrawerItem:hover {
+  border-color: color-mix(in srgb, var(--pro-accent-2) 42%, var(--pro-line));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--pro-accent-2) 12%, transparent), transparent 72%),
+    var(--pro-panel-2);
+}
+
+.phSearchDrawerIndex {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--pro-accent-2);
+  background: color-mix(in srgb, var(--pro-accent-2) 10%, transparent);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.phSearchDrawerText {
+  overflow: hidden;
+  line-height: 1.55;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phSearchDrawerCat {
+  max-width: 96px;
+  overflow: hidden;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--pro-line) 84%, transparent);
+  border-radius: 999px;
+  color: var(--pro-muted);
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phSearchJump {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--pro-accent-2) 72%, transparent),
+    0 18px 44px -32px color-mix(in srgb, var(--pro-accent-2) 80%, #000) !important;
+}
+
 @media (max-width: 1180px) {
   .app-layout {
     grid-template-columns: 210px minmax(0, 1fr);
