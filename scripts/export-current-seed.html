@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8" />
+<script>
+  const fs = require("fs");
+  const path = require("path");
+
+  (async () => {
+    const idb = await import("../electron/renderer/services/idbStore.js");
+    const params = new URLSearchParams(location.search);
+    const projectRoot = params.get("projectRoot") || process.cwd();
+    const outDir = path.join(projectRoot, "electron", "seed");
+    const outPath = path.join(outDir, "default-data.json");
+
+    try {
+      await idb.initStore();
+      const raw = JSON.parse(await idb.exportAllData());
+      const customCategories = (await idb.storeGet("phrasebook.customCategories")) || [];
+      const seed = {
+        seedId: "cangjingge-seed-v1.1.9",
+        createdAt: Date.now(),
+        files: Array.isArray(raw.files) ? raw.files : [],
+        phrases: Array.isArray(raw.phrases) ? raw.phrases : [],
+        customCategories: Array.isArray(customCategories) ? customCategories : [],
+      };
+      fs.mkdirSync(outDir, { recursive: true });
+      fs.writeFileSync(outPath, JSON.stringify(seed, null, 2));
+      console.log(`[export-current-seed] wrote ${outPath} files=${seed.files.length} phrases=${seed.phrases.length}`);
+    } catch (e) {
+      console.error(e);
+      process.exitCode = 1;
+    } finally {
+      window.close();
+    }
+  })();
+</script>

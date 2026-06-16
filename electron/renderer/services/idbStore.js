@@ -7,6 +7,7 @@ const DB_NAME = "ACSPProDB";
 const DB_VERSION = 2;
 const MIGRATION_FLAG = "acsp_migrated_idb_v1";
 const LS_MIRROR_KEY = "acsp_ls_mirror_v1";
+const BUNDLED_SEED_URL = new URL("../../seed/default-data.json", import.meta.url);
 
 /** @type {IDBDatabase | null} */
 let db = null;
@@ -283,9 +284,101 @@ function scheduleBackgroundLibrarySync(ipc) {
   }
 }
 
+function seedScopedId(seedId, kind, id) {
+  const base = String(id || `${kind}-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+    .replace(/[^a-zA-Z0-9_.:-]/g, "_")
+    .slice(0, 120);
+  return `seed:${seedId}:${kind}:${base}`;
+}
+
+async function loadBundledSeed() {
+  try {
+    const resp = await fetch(BUNDLED_SEED_URL.href, { cache: "no-store" });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (!data || typeof data !== "object") return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export async function importBundledSeedOnce() {
+  const seed = await loadBundledSeed();
+  const seedId = String(seed?.seedId || "").trim();
+  if (!seedId) return 0;
+  const markerKey = `seed.imported.${seedId}`;
+  const marker = await getKv(markerKey);
+  if (marker) return 0;
+
+  const now = Date.now();
+  let fileCount = 0;
+  let phraseCount = 0;
+
+  if (Array.isArray(seed.files)) {
+    for (const rec of seed.files) {
+      if (!rec || typeof rec !== "object") continue;
+      const id = seedScopedId(seedId, "file", rec.id);
+      const existing = await getFile(id);
+      const originalExisting = rec.id ? await getFile(rec.id) : null;
+      if (existing || originalExisting) continue;
+      await putFile(
+        {
+          ...rec,
+          id,
+          sourceSeedId: seedId,
+          originalId: rec.id || "",
+          seededAt: now,
+          isOfficialSeed: true,
+          readCursor: null,
+          readArchive: null,
+        },
+        { silent: true },
+      );
+      fileCount += 1;
+    }
+  }
+
+  if (Array.isArray(seed.phrases)) {
+    for (const phrase of seed.phrases) {
+      if (!phrase || typeof phrase !== "object") continue;
+      const id = seedScopedId(seedId, "phrase", phrase.id);
+      const existing = await getPhrase(id);
+      const originalExisting = phrase.id ? await getPhrase(phrase.id) : null;
+      if (existing || originalExisting) continue;
+      await putPhrase({
+        ...phrase,
+        id,
+        sourceSeedId: seedId,
+        originalId: phrase.id || "",
+        seededAt: now,
+        isOfficialSeed: true,
+      });
+      phraseCount += 1;
+    }
+  }
+
+  if (Array.isArray(seed.customCategories) && seed.customCategories.length) {
+    const cur = await getKv("phrasebook.customCategories");
+    const merged = new Set(Array.isArray(cur) ? cur.map(String) : []);
+    seed.customCategories.map(String).filter(Boolean).forEach((c) => merged.add(c));
+    await setKv("phrasebook.customCategories", [...merged]);
+  }
+
+  await setKv(markerKey, {
+    importedAt: now,
+    seedId,
+    files: fileCount,
+    phrases: phraseCount,
+  });
+  if (fileCount || phraseCount) notifyStoreChanged();
+  return fileCount + phraseCount;
+}
+
 export async function initStoreWithLibrary(ipc) {
   try {
     await initStore();
+    await importBundledSeedOnce();
   } catch (e) {
     console.warn("[idbStore] initStore failed, continuing with localStorage", e);
     if (!useLocalFallback) {

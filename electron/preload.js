@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld("aiDesktop", {
   libraryDelete: (payload) => ipcRenderer.invoke("library-delete", payload),
   libraryGetContent: (payload) => ipcRenderer.invoke("library-get-content", payload),
   libraryUpdateTags: (payload) => ipcRenderer.invoke("library-update-tags", payload),
+  libraryUpdateMeta: (payload) => ipcRenderer.invoke("library-update-meta", payload),
   libraryOpenOriginal: (payload) => ipcRenderer.invoke("library-open-original", payload),
   libraryGetPreview: (payload) => ipcRenderer.invoke("library-get-preview", payload),
   librarySaveTextContent: (payload) => ipcRenderer.invoke("library-save-text-content", payload),

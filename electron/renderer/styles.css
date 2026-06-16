@@ -8965,6 +8965,169 @@ body.view-compact .settings-card {
     0 18px 44px -32px color-mix(in srgb, var(--pro-accent-2) 80%, #000) !important;
 }
 
+/* —— v1.1.9 Quiet Chrome + Reader Bar —— */
+.top-header {
+  grid-template-columns: auto minmax(260px, 0.34fr) auto auto !important;
+  min-height: 54px !important;
+  padding: 7px 10px !important;
+}
+
+.top-header #headerProjectName,
+.top-header #headerCommandBtn,
+.top-header #headerKeyBadge {
+  display: none !important;
+}
+
+.top-header .header-spacer {
+  min-width: 0 !important;
+}
+
+.top-header .hdr-focus-btn {
+  min-width: 86px !important;
+}
+
+.top-header .hdr-select {
+  min-height: 34px !important;
+}
+
+#libMainReader {
+  padding: 8px 10px 10px !important;
+  border-radius: 16px !important;
+}
+
+.library-reader-commandbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(280px, 0.42fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  margin: -2px 0 8px;
+  padding: 7px;
+  border: 1px solid color-mix(in srgb, var(--pro-line) 82%, transparent);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--pro-accent-2) 8%, transparent), transparent 68%),
+    color-mix(in srgb, var(--pro-panel) 92%, transparent);
+  box-shadow: 0 14px 36px -32px rgba(0, 0, 0, 0.56);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.library-reader-titleline {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.library-reader-title-input {
+  min-height: 34px !important;
+  padding: 5px 9px !important;
+  border-color: color-mix(in srgb, var(--pro-accent-2) 26%, var(--pro-line)) !important;
+  color: var(--pro-text) !important;
+  font-size: 0.94rem !important;
+  font-weight: 950 !important;
+}
+
+.library-reader-meta {
+  overflow: hidden;
+  font-size: 0.68rem !important;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-reader-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  padding-bottom: 1px;
+  scrollbar-width: thin;
+}
+
+.library-reader-actions .btn,
+.library-reader-actions .inp {
+  min-height: 32px !important;
+  padding: 4px 8px !important;
+  font-size: 0.72rem !important;
+  white-space: nowrap;
+}
+
+.library-reader-actions #libReaderWidth {
+  max-width: 86px !important;
+}
+
+.library-reader-font-stat,
+.library-reader-stat,
+#libMainEditStatus {
+  font-size: 0.68rem !important;
+  white-space: nowrap;
+}
+
+.library-reader-searchwrap {
+  display: flex;
+  flex: 1 0 260px;
+  max-width: 380px;
+  min-width: 220px;
+  align-items: center;
+  gap: 6px;
+}
+
+.library-reader-searchwrap #libMainKw {
+  min-height: 32px !important;
+  font-size: 0.74rem !important;
+}
+
+#libMainDebug,
+#libMainHitList {
+  margin-top: 4px !important;
+}
+
+#libMainArticle,
+#libMainNativeWrap,
+#libMainTextEditor {
+  margin-top: 6px !important;
+  min-height: calc(100vh - 188px) !important;
+  max-height: calc(100vh - 188px) !important;
+}
+
+#libMainArticle {
+  padding: clamp(18px, 2.4vw, 34px) clamp(22px, 4vw, 58px) !important;
+  border-radius: 14px !important;
+}
+
+#libMainReader.reader-chrome-collapsed .library-reader-commandbar {
+  grid-template-columns: minmax(200px, 0.34fr) minmax(0, 1fr);
+  margin-bottom: 5px;
+  padding: 5px;
+}
+
+#libMainReader.reader-chrome-collapsed .library-reader-meta,
+#libMainReader.reader-chrome-collapsed #libMainEditStatus,
+#libMainReader.reader-chrome-collapsed .library-reader-stat {
+  display: none !important;
+}
+
+#libMainReader.reader-chrome-collapsed #libMainArticle,
+#libMainReader.reader-chrome-collapsed #libMainNativeWrap,
+#libMainReader.reader-chrome-collapsed #libMainTextEditor {
+  min-height: calc(100vh - 92px) !important;
+  max-height: calc(100vh - 92px) !important;
+}
+
+@media (max-width: 1120px) {
+  .library-reader-commandbar {
+    grid-template-columns: 1fr;
+  }
+
+  .library-reader-actions {
+    flex-wrap: nowrap;
+  }
+}
+
 @media (max-width: 1180px) {
   .app-layout {
     grid-template-columns: 210px minmax(0, 1fr);

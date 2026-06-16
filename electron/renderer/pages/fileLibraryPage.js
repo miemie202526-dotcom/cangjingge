@@ -280,47 +280,38 @@ export function mountFileLibrary(root, ctx) {
       <button type="button" class="btn btn-ghost btn-sm" id="libRefresh">${p.refresh || ""}</button>
     </div>
     <div id="libMainReader" class="card hidden" style="display:none;min-height:calc(100vh - 120px);padding:14px 16px">
-      <div class="row library-reader-topline" style="justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-        <div>
-          <h2 id="libMainTitle" style="margin:0;font-size:1.18rem">项目内阅读器</h2>
-          <p id="libMainMeta" class="muted" style="margin:6px 0 0;font-size:0.8rem"></p>
+      <div class="library-reader-commandbar">
+        <div class="library-reader-titleline">
+          <input class="inp library-reader-title-input" id="libMainTitle" maxlength="180" placeholder="文件标题" />
+          <span id="libMainMeta" class="muted library-reader-meta"></span>
         </div>
-        <div class="row" style="gap:8px;align-items:center">
+        <div class="library-reader-actions">
           <button type="button" class="btn btn-secondary btn-sm" id="libMainFocusToggle">收起栏</button>
-          <button type="button" class="btn btn-secondary btn-sm" id="libMainBack">返回文件列表</button>
-        </div>
-      </div>
-      <div class="row library-reader-secondary" style="gap:8px;flex-wrap:wrap;margin-bottom:8px">
-        <button type="button" class="btn btn-secondary btn-sm" id="libMainToAnalysis">发送到 AI 分析</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="libMainToGen">发送到文件生成</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="libMainCopy">复制全文</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="libMainOpenOs">系统打开</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="libMainEditText">编辑正文</button>
-        <button type="button" class="btn btn-primary btn-sm hidden" id="libMainSaveText" style="display:none">保存修改</button>
-        <button type="button" class="btn btn-ghost btn-sm hidden" id="libMainCancelEdit" style="display:none">取消编辑</button>
-        <button type="button" class="btn btn-primary btn-sm" id="libMainSavePhrase" title="保存当前选中文本或命中句到金句库">保存到金句库</button>
-        <span class="muted" id="libMainEditStatus" style="font-size:0.74rem"></span>
-      </div>
-      <div class="library-reader-controls library-reader-secondary">
-        <span class="muted">阅读视图</span>
-        <button type="button" class="btn btn-secondary btn-sm" id="libReaderTextView">文本阅读</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="libReaderNativeView">原始预览</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="libReaderZoomOut">A-</button>
-        <span id="libReaderFontStat" class="muted">15px</span>
-        <button type="button" class="btn btn-secondary btn-sm" id="libReaderZoomIn">A+</button>
-        <select class="inp" id="libReaderWidth" style="max-width:150px">
-          <option value="comfortable">舒适宽度</option>
-          <option value="wide">宽屏阅读</option>
-          <option value="full">最大铺满</option>
-        </select>
-        <button type="button" class="btn btn-secondary btn-sm" id="libReaderTop">回到顶部</button>
-      </div>
-      <div class="row library-reader-searchbar" style="margin-top:8px;gap:8px;align-items:center;flex-wrap:wrap">
-        <button type="button" class="btn btn-primary btn-sm" id="libMainSaveMeta">保存标注与记忆</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="libMainArchiveSave" title="保存当前阅读位置">存档位置</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="libMainArchiveGo" title="跳回上次手动存档的位置">回到存档</button>
-        <div id="libMainKwWrap" style="display:flex;align-items:center;gap:10px;flex:0 1 480px;min-width:260px;max-width:520px">
-          <input class="inp" id="libMainKw" style="flex:1;min-width:0" placeholder="阅读器关键词（按 / 聚焦，回车跳转下一个）" />
+          <button type="button" class="btn btn-secondary btn-sm" id="libMainBack">返回列表</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="libMainToAnalysis">AI 分析</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="libMainToGen">生成文档</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="libMainCopy">复制</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="libMainOpenOs">系统打开</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="libMainEditText">编辑内容</button>
+          <button type="button" class="btn btn-primary btn-sm hidden" id="libMainSaveText" style="display:none">保存内容</button>
+          <button type="button" class="btn btn-ghost btn-sm hidden" id="libMainCancelEdit" style="display:none">取消</button>
+          <button type="button" class="btn btn-primary btn-sm" id="libMainSavePhrase" title="保存当前选中文本或命中句到金句库">存金句</button>
+          <button type="button" class="btn btn-primary btn-sm" id="libMainSaveMeta">保存标注</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="libMainArchiveSave" title="保存当前阅读位置">存档</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="libMainArchiveGo" title="跳回上次手动存档的位置">回档</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="libReaderTextView">文本</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="libReaderNativeView">原貌</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="libReaderZoomOut">A-</button>
+          <span id="libReaderFontStat" class="muted library-reader-font-stat">15px</span>
+          <button type="button" class="btn btn-secondary btn-sm" id="libReaderZoomIn">A+</button>
+          <select class="inp" id="libReaderWidth">
+            <option value="comfortable">舒适</option>
+            <option value="wide">宽屏</option>
+            <option value="full">铺满</option>
+          </select>
+          <button type="button" class="btn btn-secondary btn-sm" id="libReaderTop">顶部</button>
+          <div id="libMainKwWrap" class="library-reader-searchwrap">
+            <input class="inp" id="libMainKw" style="flex:1;min-width:0" placeholder="关键词搜索" />
           <div id="libMainHitNav" class="hidden kwHitNav">
             <span id="libMainHitCount" class="kwHitCount">0/0</span>
             <button type="button" class="kwHitBtn" id="libMainHitPrev" title="上一个 (Shift+Enter)" aria-label="上一个">↑</button>
@@ -328,8 +319,10 @@ export function mountFileLibrary(root, ctx) {
             <button type="button" class="kwHitBtn kwHitBtnClose" id="libMainHitClose" title="清除搜索" aria-label="清除">×</button>
           </div>
         </div>
-        <button type="button" class="btn btn-primary btn-sm" id="libMainSearch">搜索</button>
-        <span id="libMainStat" class="muted" style="font-size:0.74rem"></span>
+          <button type="button" class="btn btn-primary btn-sm" id="libMainSearch">搜索</button>
+          <span id="libMainStat" class="muted library-reader-stat"></span>
+          <span class="muted" id="libMainEditStatus"></span>
+        </div>
       </div>
       <div id="libMainDebug" class="muted" style="font-size:0.72rem;margin-top:4px;opacity:0.85"></div>
       <div id="libMainHitList" class="preview-box hidden" style="margin-top:8px;padding:8px;max-height:120px;overflow:auto"></div>
@@ -1299,6 +1292,53 @@ export function mountFileLibrary(root, ctx) {
     return selectedId ? items.find((x) => x.id === selectedId) || null : null;
   }
 
+  function visibleFileTitle(rec) {
+    return String(rec?.fileName || rec?.title || "未命名文件").trim() || "未命名文件";
+  }
+
+  function canEditReadableContent(rec) {
+    return Boolean(rec && typeof rec.content === "string");
+  }
+
+  function textStats(text) {
+    const raw = String(text || "");
+    return {
+      charCount: raw.length,
+      lineCount: raw ? raw.split(/\r?\n/).length : 0,
+      preview: raw.replace(/\s+/g, " ").trim().slice(0, 600),
+    };
+  }
+
+  async function saveMainTitle() {
+    if (!selectedId) return;
+    const input = root.querySelector("#libMainTitle");
+    const rec = mainCurrentRecord || selectedRec();
+    if (!input || !rec) return;
+    const nextName = String(input.value || "").trim().replace(/[\\/]/g, "_").slice(0, 180);
+    const oldName = visibleFileTitle(rec);
+    if (!nextName || nextName === oldName) {
+      input.value = oldName;
+      return;
+    }
+    try {
+      const patch = { fileName: nextName, title: nextName, editedAt: Date.now() };
+      await idb.patchFile(selectedId, patch);
+      try {
+        await ctx.ipc?.libraryUpdateMeta?.({ id: selectedId, patch });
+      } catch {
+        // 种子文件或旧记录可能没有主进程原文件，IDB 标题已保存。
+      }
+      mainCurrentRecord = { ...rec, ...patch };
+      ctx.toast("标题已更新");
+      await reload();
+      const fresh = items.find((x) => x.id === selectedId) || mainCurrentRecord;
+      fillMainReader({ ...fresh, ...patch });
+    } catch (e) {
+      input.value = oldName;
+      ctx.toast(e?.message || "标题保存失败", true);
+    }
+  }
+
   function refreshReaderMatches() {
     const content = String(readerBody.value || "");
     const kw = String(readerKw.value || "").trim().toLowerCase();
@@ -1490,8 +1530,8 @@ export function mountFileLibrary(root, ctx) {
         cancelBtn.classList.remove("hidden");
         cancelBtn.style.display = "";
       }
-      if (editBtn) editBtn.textContent = "正在编辑";
-      if (mainEditStatus) mainEditStatus.textContent = "正在编辑本地副本";
+      if (editBtn) editBtn.textContent = "编辑中";
+      if (mainEditStatus) mainEditStatus.textContent = canEditTextFile(mainCurrentRecord) ? "将写回原文件" : "将保存为本地阅读副本";
       requestAnimationFrame(() => mainTextEditor.focus());
     } else {
       mainTextEditor.classList.add("hidden");
@@ -1504,7 +1544,7 @@ export function mountFileLibrary(root, ctx) {
         cancelBtn.classList.add("hidden");
         cancelBtn.style.display = "none";
       }
-      if (editBtn) editBtn.textContent = "编辑正文";
+      if (editBtn) editBtn.textContent = "编辑内容";
       if (mainEditStatus) mainEditStatus.textContent = "";
       ensureMainTextMode();
     }
@@ -1690,8 +1730,9 @@ export function mountFileLibrary(root, ctx) {
     if (!rec) return;
     if (mainEditMode) setMainEditMode(false);
     mainCurrentRecord = rec;
-    root.querySelector("#libMainTitle").textContent = rec.fileName || "项目内阅读器";
-    root.querySelector("#libMainMeta").textContent = `扩展名 ${extOf(rec) || "—"} · 字符 ${rec.charCount ?? "—"} · 行 ${rec.lineCount ?? "—"} · 分类 ${rec.category || "未分类"} · 优先级 ${rec.priority || "未设置"}`;
+    const titleInput = root.querySelector("#libMainTitle");
+    if (titleInput) titleInput.value = visibleFileTitle(rec);
+    root.querySelector("#libMainMeta").textContent = `${extOf(rec) || "文件"} · ${Number(rec.charCount ?? 0).toLocaleString()} 字 · ${Number(rec.lineCount ?? 0).toLocaleString()} 行 · ${rec.category || "未分类"}`;
     root.querySelector("#libMainTags").value = Array.isArray(rec.tags) ? rec.tags.join(", ") : "";
     root.querySelector("#libMainCategory").value = rec.category || "";
     root.querySelector("#libMainPriority").value = rec.priority || "";
@@ -1705,13 +1746,15 @@ export function mountFileLibrary(root, ctx) {
         : "还没有手动存档位置";
     }
     mainBaseText = String(rec.content || "");
-    const editable = canEditTextFile(rec);
+    const editable = canEditReadableContent(rec);
     const editBtn = root.querySelector("#libMainEditText");
     if (editBtn) {
       editBtn.disabled = !editable;
-      editBtn.title = editable ? "直接编辑并保存这份文本类文件" : "此格式请用原始预览或系统打开编辑；软件内可保存标注与记忆";
+      editBtn.title = editable
+        ? "编辑当前阅读内容；文本类写回原文件，其他格式保存为本地阅读副本"
+        : "当前记录没有可编辑正文；可保存标注与记忆";
     }
-    if (mainEditStatus) mainEditStatus.textContent = editable ? "" : "此格式支持原始预览与标注；正文编辑请系统打开";
+    if (mainEditStatus) mainEditStatus.textContent = editable ? "" : "没有可编辑正文";
     mainPreviewKind = "text";
     mainNativeWrap.innerHTML = "";
     mainNativeWrap.classList.add("hidden");
@@ -2806,8 +2849,8 @@ export function mountFileLibrary(root, ctx) {
   root.querySelector("#libMainEditText")?.addEventListener("click", () => {
     const rec = selectedRec();
     if (!rec) return;
-    if (!canEditTextFile(rec)) {
-      ctx.toast("这个格式不适合在软件内直接改正文；可用系统打开编辑，或在下方保存标注与记忆。", true);
+    if (!canEditReadableContent(rec)) {
+      ctx.toast("这个文件暂时没有可编辑正文，可先重新解析或保存标注。", true);
       return;
     }
     setMainEditMode(true);
@@ -2821,23 +2864,52 @@ export function mountFileLibrary(root, ctx) {
   root.querySelector("#libMainSaveText")?.addEventListener("click", async () => {
     if (!selectedId) return;
     const rec = selectedRec();
-    if (!rec || !canEditTextFile(rec)) {
-      ctx.toast("此文件格式暂不支持直接保存正文", true);
+    if (!rec || !canEditReadableContent(rec)) {
+      ctx.toast("没有可保存的正文内容", true);
       return;
     }
     const text = String(mainTextEditor.value || "");
     try {
-      const r = await ctx.ipc.librarySaveTextContent({ id: selectedId, text, apiKey: ctx.getApiKey() });
-      await persistFromLibraryResult(r);
+      if (canEditTextFile(rec)) {
+        const r = await ctx.ipc.librarySaveTextContent({ id: selectedId, text, apiKey: ctx.getApiKey() });
+        await persistFromLibraryResult(r);
+      } else {
+        const stats = textStats(text);
+        await idb.patchFile(selectedId, {
+          content: text,
+          preview: stats.preview,
+          charCount: stats.charCount,
+          lineCount: stats.lineCount,
+          editedAt: Date.now(),
+          contentEditedInApp: true,
+        });
+        try {
+          await ctx.ipc?.libraryUpdateMeta?.({
+            id: selectedId,
+            patch: { preview: stats.preview, charCount: stats.charCount, lineCount: stats.lineCount, editedAt: Date.now() },
+          });
+        } catch {
+          // 没有原始文件记录时只保存到 IndexedDB。
+        }
+      }
       mainBaseText = text;
       setMainEditMode(false);
-      ctx.toast("正文修改已保存到本地文件库");
+      ctx.toast(canEditTextFile(rec) ? "正文修改已保存到原文件" : "阅读内容已保存为本地副本");
       ctx.emitLibraryChanged();
       await reload();
       const fresh = items.find((x) => x.id === selectedId) || { ...rec, content: text };
       fillMainReader({ ...fresh, content: text });
     } catch (e) {
       ctx.toast(e?.message || "保存正文失败", true);
+    }
+  });
+  root.querySelector("#libMainTitle")?.addEventListener("blur", () => {
+    void saveMainTitle();
+  });
+  root.querySelector("#libMainTitle")?.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      ev.currentTarget.blur();
     }
   });
   root.querySelector("#libMainSavePhrase").addEventListener("click", () => {
@@ -2894,7 +2966,11 @@ export function mountFileLibrary(root, ctx) {
     const annotationNote = String(root.querySelector("#libMainNote").value || "").trim();
     const memoryNote = String(root.querySelector("#libMainMemory").value || "").trim();
     try {
-      await ctx.ipc.libraryUpdateTags({ id: selectedId, tags });
+      try {
+        await ctx.ipc.libraryUpdateTags({ id: selectedId, tags });
+      } catch {
+        // 种子资料可能只有 IndexedDB 副本，没有主进程原文件。
+      }
       await idb.patchFile(selectedId, {
         tags,
         category,
@@ -3174,7 +3250,11 @@ export function mountFileLibrary(root, ctx) {
     const memoryEl = root.querySelector("#libMemory");
     const memoryNote = memoryEl ? String(memoryEl.value || "").trim() : undefined;
     try {
-      await ctx.ipc.libraryUpdateTags({ id: selectedId, tags });
+      try {
+        await ctx.ipc.libraryUpdateTags({ id: selectedId, tags });
+      } catch {
+        // 种子资料可能只有 IndexedDB 副本，没有主进程原文件。
+      }
       const patch = { tags, category, priority, annotationNote };
       if (memoryNote !== undefined) patch.memoryNote = memoryNote;
       await idb.patchFile(selectedId, patch);

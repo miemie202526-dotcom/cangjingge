@@ -961,6 +961,12 @@ app.whenReady().then(() => {
     return libraryStore.updateTags(id, tags);
   });
 
+  ipcMain.handle("library-update-meta", async (_event, payload) => {
+    const { id, patch } = payload || {};
+    if (!id) throw new Error("缺少 id。");
+    return libraryStore.updateMetadata(id, patch || {});
+  });
+
   ipcMain.handle("library-open-original", async (_event, payload) => {
     const { id } = payload || {};
     if (!id) throw new Error("缺少 id。");

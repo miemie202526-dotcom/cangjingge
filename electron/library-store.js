@@ -116,6 +116,21 @@ function updateTags(id, tags) {
   return rec;
 }
 
+function updateMetadata(id, patch) {
+  const rec = readRecord(id);
+  if (!rec) throw new Error("文件不存在。");
+  const next = { ...rec };
+  const allowed = ["fileName", "category", "priority", "annotationNote", "memoryNote", "tags", "preview", "charCount", "lineCount", "editedAt"];
+  for (const key of allowed) {
+    if (Object.prototype.hasOwnProperty.call(patch || {}, key)) next[key] = patch[key];
+  }
+  if (typeof next.fileName === "string") {
+    next.fileName = path.basename(next.fileName).replace(/[\\/]/g, "_").trim() || rec.fileName;
+  }
+  fs.writeFileSync(path.join(itemDir(id), "meta.json"), JSON.stringify(next, null, 2));
+  return next;
+}
+
 async function reparseItem(id, apiKey) {
   const rec = readRecord(id);
   if (!rec) throw new Error("文件不存在。");
@@ -268,6 +283,7 @@ module.exports = {
   deleteItem,
   getFullText,
   updateTags,
+  updateMetadata,
   openOriginal,
   getPreview,
   saveTextContent,
