@@ -173,6 +173,114 @@ function escapeHtml(s) {
     .replace(/'/g, "&#39;");
 }
 
+function argbToCss(argb) {
+  const raw = String(argb || "").replace(/^#/, "");
+  if (!/^[0-9a-f]{6,8}$/i.test(raw)) return "";
+  return `#${raw.slice(-6)}`;
+}
+
+function excelValueToText(value) {
+  if (value == null) return "";
+  if (value instanceof Date) return value.toLocaleString();
+  if (typeof value === "object") {
+    if (Array.isArray(value.richText)) return value.richText.map((x) => x.text || "").join("");
+    if (Object.prototype.hasOwnProperty.call(value, "result")) return excelValueToText(value.result);
+    if (Object.prototype.hasOwnProperty.call(value, "text")) return String(value.text || "");
+    if (Object.prototype.hasOwnProperty.call(value, "hyperlink")) return String(value.text || value.hyperlink || "");
+  }
+  return String(value);
+}
+
+function spreadsheetColLabel(idx) {
+  let n = idx;
+  let out = "";
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    out = String.fromCharCode(65 + rem) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out || String(idx);
+}
+
+async function excelJsSheetToHtml(fp) {
+  const ExcelJS = require("exceljs");
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.readFile(fp);
+  const sheetsArr = wb.worksheets || [];
+  const tabs = sheetsArr
+    .map((ws, idx) => `<button type="button" data-sheet="${idx}" class="sheet-tab${idx === 0 ? " active" : ""}">${escapeHtml(ws.name)}</button>`)
+    .join("");
+  const mergeStarts = (ws) => {
+    const starts = new Map();
+    const skip = new Set();
+    const merges = ws._merges ? Object.values(ws._merges) : [];
+    for (const merge of merges) {
+      const model = merge?.model || merge;
+      const top = Number(model.top || model.tl?.nativeRow || 0);
+      const left = Number(model.left || model.tl?.nativeCol || 0);
+      const bottom = Number(model.bottom || model.br?.nativeRow || top);
+      const right = Number(model.right || model.br?.nativeCol || left);
+      if (!top || !left) continue;
+      starts.set(`${top}:${left}`, { rowSpan: Math.max(1, bottom - top + 1), colSpan: Math.max(1, right - left + 1) });
+      for (let r = top; r <= bottom; r += 1) {
+        for (let c = left; c <= right; c += 1) {
+          if (r === top && c === left) continue;
+          skip.add(`${r}:${c}`);
+        }
+      }
+    }
+    return { starts, skip };
+  };
+  const cellStyle = (cell, row, col) => {
+    const styles = [];
+    const width = Number(col?.width || 0);
+    if (Number.isFinite(width) && width > 0) styles.push(`min-width:${Math.min(Math.max(width * 8, 56), 360)}px`);
+    const height = Number(row?.height || 0);
+    if (Number.isFinite(height) && height > 0) styles.push(`height:${Math.min(Math.max(height * 1.25, 20), 180)}px`);
+    const fillColor = argbToCss(cell?.fill?.fgColor?.argb || cell?.fill?.bgColor?.argb);
+    if (fillColor) styles.push(`background:${fillColor}`);
+    const fontColor = argbToCss(cell?.font?.color?.argb);
+    if (fontColor) styles.push(`color:${fontColor}`);
+    if (cell?.font?.bold) styles.push("font-weight:700");
+    if (cell?.font?.italic) styles.push("font-style:italic");
+    if (cell?.font?.underline) styles.push("text-decoration:underline");
+    const h = cell?.alignment?.horizontal;
+    if (h) styles.push(`text-align:${h === "centerContinuous" ? "center" : h}`);
+    const v = cell?.alignment?.vertical;
+    if (v) styles.push(`vertical-align:${v === "middle" ? "middle" : v}`);
+    if (cell?.alignment?.wrapText) styles.push("white-space:pre-wrap");
+    return styles.length ? ` style="${styles.join(";")}"` : "";
+  };
+  const sheets = sheetsArr.map((ws, idx) => {
+    const rowCount = ws.rowCount || 0;
+    const colCount = ws.columnCount || 0;
+    if (!rowCount || !colCount) {
+      return `<section class="sheet-page${idx === 0 ? " active" : ""}" data-sheet-page="${idx}"><div class="muted" style="padding:18px">空工作表</div></section>`;
+    }
+    const { starts, skip } = mergeStarts(ws);
+    const colHeads = Array.from({ length: colCount }, (_, i) => `<th>${spreadsheetColLabel(i + 1)}</th>`).join("");
+    let body = "";
+    for (let r = 1; r <= rowCount; r += 1) {
+      const row = ws.getRow(r);
+      let cells = "";
+      for (let c = 1; c <= colCount; c += 1) {
+        if (skip.has(`${r}:${c}`)) continue;
+        const cell = row.getCell(c);
+        const merge = starts.get(`${r}:${c}`);
+        const attrs = [
+          merge?.rowSpan > 1 ? `rowspan="${merge.rowSpan}"` : "",
+          merge?.colSpan > 1 ? `colspan="${merge.colSpan}"` : "",
+          cellStyle(cell, row, ws.getColumn(c)),
+        ].filter(Boolean).join(" ");
+        cells += `<td${attrs ? ` ${attrs}` : ""}>${escapeHtml(excelValueToText(cell.value))}</td>`;
+      }
+      body += `<tr><th>${r}</th>${cells}</tr>`;
+    }
+    return `<section class="sheet-page${idx === 0 ? " active" : ""}" data-sheet-page="${idx}"><table><thead><tr><th></th>${colHeads}</tr></thead><tbody>${body}</tbody></table></section>`;
+  }).join("");
+  return { tabs, sheets, sheetCount: sheetsArr.length };
+}
+
 function sheetToHtml(fp) {
   const xlsx = require("xlsx");
   const wb = xlsx.readFile(fp, { cellDates: true, cellStyles: true });
@@ -315,7 +423,7 @@ async function getPreview(id, apiKey, maxText = 12000) {
   }
   if (ext === ".xlsx" || ext === ".xls") {
     try {
-      const sheet = sheetToHtml(fp);
+      const sheet = ext === ".xlsx" ? await excelJsSheetToHtml(fp) : sheetToHtml(fp);
       return { kind: "spreadsheet_html", ...sheet, fileName: rec.fileName };
     } catch (e) {
       const { content } = await ingestLocalFile(fp, { apiKey: apiKey || "" });

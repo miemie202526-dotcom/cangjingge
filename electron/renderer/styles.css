@@ -2886,6 +2886,70 @@ body.theme-light .phBlockDel {
   background: rgba(239, 68, 68, 0.08) !important;
 }
 
+.phBlock {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.08);
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.phBlockMain {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.phBlockIndex {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid;
+  border-radius: 50%;
+  color: var(--text-strong);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.phBlockText {
+  min-width: 0;
+  color: #e8edf5;
+  font-size: 1rem;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  user-select: text;
+  cursor: text;
+}
+
+.phBlockActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.22);
+}
+
+.phBlockActions .btn {
+  min-height: 28px !important;
+  padding: 4px 10px !important;
+  font-size: 0.72rem !important;
+}
+
+.phBlockDel {
+  color: #fecaca !important;
+  border-color: rgba(248, 113, 113, 0.45) !important;
+}
+
 /* 文件库阅读器 / 卡片 / 命中句 */
 body.theme-light #libMainReader,
 body.theme-light #libMainArticle,
@@ -6349,7 +6413,7 @@ body.theme-light .lib-brain-panel {
 .lib-native-frame,
 #libMainNativeWrap iframe {
   width: 100% !important;
-  height: calc(100vh - 320px) !important;
+  height: calc(100vh - 178px) !important;
   border: 1px solid rgba(148, 163, 184, 0.25) !important;
   border-radius: 10px !important;
   background: #fff !important;
@@ -6357,7 +6421,7 @@ body.theme-light .lib-brain-panel {
 
 #libMainReader.reader-chrome-collapsed .lib-native-frame,
 #libMainReader.reader-chrome-collapsed #libMainNativeWrap iframe {
-  height: calc(100vh - 160px) !important;
+  height: calc(100vh - 94px) !important;
 }
 
 #libMainReader.reader-width-comfortable #libMainArticle {
@@ -9071,9 +9135,9 @@ body.view-compact .settings-card {
   top: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: minmax(280px, 0.42fr) minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
+  grid-template-columns: minmax(260px, 0.34fr) minmax(0, 1fr);
+  gap: 8px 10px;
+  align-items: start;
   margin: -2px 0 8px;
   padding: 7px;
   border: 1px solid color-mix(in srgb, var(--pro-line) 82%, transparent);
@@ -9114,15 +9178,19 @@ body.view-compact .settings-card {
   min-width: 0;
   align-items: center;
   gap: 5px;
-  overflow-x: auto;
-  padding-bottom: 1px;
+  flex-wrap: wrap;
+  overflow: visible;
+  padding-bottom: 0;
   scrollbar-width: thin;
 }
 
 .library-reader-actions .btn,
 .library-reader-actions .inp {
-  min-height: 32px !important;
-  padding: 4px 8px !important;
+  flex: 0 0 auto;
+  width: auto !important;
+  min-width: max-content;
+  min-height: 30px !important;
+  padding: 4px 9px !important;
   font-size: 0.72rem !important;
   white-space: nowrap;
 }
@@ -9140,9 +9208,9 @@ body.view-compact .settings-card {
 
 .library-reader-searchwrap {
   display: flex;
-  flex: 1 0 260px;
-  max-width: 380px;
-  min-width: 220px;
+  flex: 1 1 360px;
+  max-width: none;
+  min-width: min(320px, 100%);
   align-items: center;
   gap: 6px;
 }
@@ -9161,8 +9229,8 @@ body.view-compact .settings-card {
 #libMainNativeWrap,
 #libMainTextEditor {
   margin-top: 6px !important;
-  min-height: calc(100vh - 188px) !important;
-  max-height: calc(100vh - 188px) !important;
+  min-height: calc(100vh - 162px) !important;
+  max-height: calc(100vh - 162px) !important;
 }
 
 #libMainArticle {
@@ -9171,7 +9239,7 @@ body.view-compact .settings-card {
 }
 
 #libMainReader.reader-chrome-collapsed .library-reader-commandbar {
-  grid-template-columns: minmax(200px, 0.34fr) minmax(0, 1fr);
+  grid-template-columns: minmax(200px, 0.28fr) minmax(0, 1fr);
   margin-bottom: 5px;
   padding: 5px;
 }
@@ -9185,8 +9253,8 @@ body.view-compact .settings-card {
 #libMainReader.reader-chrome-collapsed #libMainArticle,
 #libMainReader.reader-chrome-collapsed #libMainNativeWrap,
 #libMainReader.reader-chrome-collapsed #libMainTextEditor {
-  min-height: calc(100vh - 92px) !important;
-  max-height: calc(100vh - 92px) !important;
+  min-height: calc(100vh - 82px) !important;
+  max-height: calc(100vh - 82px) !important;
 }
 
 @media (max-width: 1120px) {

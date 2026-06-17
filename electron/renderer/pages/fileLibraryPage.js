@@ -1861,17 +1861,19 @@ export function mountFileLibrary(root, ctx) {
         const iframe = document.createElement("iframe");
         iframe.className = "lib-native-frame";
         iframe.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>
-          body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',Arial,sans-serif;background:#f8fafc;color:#0f172a}
-          .tabs{position:sticky;top:0;display:flex;gap:8px;padding:10px;border-bottom:1px solid #dbe4ee;background:#fff;z-index:5}
-          .sheet-tab{border:1px solid #cbd5e1;border-radius:999px;background:#fff;padding:6px 12px;font-weight:800;cursor:pointer}
-          .sheet-tab.active{background:#0f766e;color:#fff;border-color:#0f766e}
-          .sheet-page{display:none;padding:12px;overflow:auto}.sheet-page.active{display:block}
+          html,body{height:100%}
+          body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',Arial,sans-serif;background:#f6f7f2;color:#0f172a}
+          .tabs{position:sticky;top:0;display:flex;gap:8px;padding:8px 10px;border-bottom:1px solid #d6ddcf;background:linear-gradient(180deg,#fff,#f7f8f4);z-index:6;box-shadow:0 8px 22px rgba(15,23,42,.08)}
+          .sheet-tab{border:1px solid #bcc8b5;border-radius:8px;background:#fff;padding:6px 12px;font-weight:800;cursor:pointer;color:#334155}
+          .sheet-tab.active{background:#0f766e;color:#fff;border-color:#0f766e;box-shadow:0 6px 16px rgba(15,118,110,.2)}
+          .sheet-page{display:none;padding:10px;overflow:auto}.sheet-page.active{display:block}
           table{border-collapse:collapse;background:#fff;min-width:100%;box-shadow:0 1px 0 #e2e8f0}
-          th{position:sticky;top:48px;background:#eef2f7;color:#475569;font-size:12px;z-index:2}
+          th{position:sticky;top:48px;background:#eef2e8;color:#475569;font-size:12px;z-index:2;text-align:center}
           th:first-child{left:0;z-index:3}
-          td,th{border:1px solid #dbe4ee;padding:7px 9px;min-width:92px;max-width:460px;white-space:pre-wrap;vertical-align:top}
+          td,th{border:1px solid #d6ddcf;padding:6px 8px;min-width:92px;max-width:520px;white-space:pre-wrap;vertical-align:top}
           td{font-size:13px;line-height:1.45;background:#fff}
-          tbody tr:hover td{background:#f8fbff}
+          tbody tr:hover td{outline:1px solid rgba(37,99,235,.22);outline-offset:-1px}
+          a{color:#2563eb}
         </style></head><body><div class="tabs">${pv.tabs || ""}</div>${pv.sheets || ""}<script>
           document.querySelectorAll('.sheet-tab').forEach(btn=>btn.addEventListener('click',()=>{
             document.querySelectorAll('.sheet-tab').forEach(x=>x.classList.remove('active'));

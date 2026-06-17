@@ -588,7 +588,7 @@ const pages = {
     deleted: "已删除",
     copied: "已复制到剪贴板",
     needText: "请输入金句内容",
-    defaultCategories: ["金句话术", "客户回应", "投资观念", "自我成长", "情感表达", "经典语录"],
+    defaultCategories: [],
     presetCategoryLabel: "快捷分类",
   },
   history: {

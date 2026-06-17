@@ -129,7 +129,7 @@ export async function mountPhrasebook(root, ctx) {
   root.innerHTML = "";
   const m = ctx.manifest();
   const p = m.pages?.phrasebook || {};
-  const presetCats = Array.isArray(p.defaultCategories) ? p.defaultCategories : [];
+  const presetCats = [];
 
   root.appendChild(
     el(`
@@ -232,11 +232,6 @@ export async function mountPhrasebook(root, ctx) {
       </div>
       <label class="muted" style="font-size:0.82rem;margin-top:10px;display:block">${escHtml(p.formNote || "备注 / 学习点")}</label>
       <textarea class="inp" id="phEditNote" rows="2" style="margin-top:4px" placeholder="为什么收藏？关键学习点是什么？"></textarea>
-      <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
-        ${(presetCats || [])
-          .map((c) => `<button type="button" class="btn btn-ghost btn-sm phPresetCat" data-cat="${escAttr(c)}" style="border-radius:999px">${escHtml(c)}</button>`)
-          .join("")}
-      </div>
       <div class="row" style="margin-top:14px;gap:8px;justify-content:flex-end">
         <button type="button" class="btn btn-ghost btn-sm" id="phCancel">${escHtml(p.cancelBtn || "取消")}</button>
         <button type="button" class="btn btn-primary btn-sm" id="phSave">${escHtml(p.saveBtn || "保存")}</button>
@@ -348,10 +343,6 @@ export async function mountPhrasebook(root, ctx) {
 
   function allCategoryNames() {
     const cats = new Set();
-    for (const c of presetCats) {
-      const name = normalizeCategoryName(c);
-      if (name) cats.add(name);
-    }
     for (const c of customCats) {
       const name = normalizeCategoryName(c);
       if (name) cats.add(name);
@@ -376,7 +367,7 @@ export async function mountPhrasebook(root, ctx) {
   async function ensureCustomCategory(name) {
     const normalized = normalizeCategoryName(name);
     if (!normalized) return "";
-    if (!customCats.includes(normalized) && !presetCats.includes(normalized)) {
+    if (!customCats.includes(normalized)) {
       await saveCustomCategories([...customCats, normalized]);
     }
     return normalized;
@@ -1078,7 +1069,11 @@ export async function mountPhrasebook(root, ctx) {
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(it);
     }
-    for (const c of allCategoryNames()) if (!map.has(c)) map.set(c, []);
+    for (const c of customCats) {
+      const name = normalizeCategoryName(c);
+      if (name && map.has(name)) continue;
+      if (name && items.some((it) => recordCategory(it) === name)) map.set(name, []);
+    }
 
     const cats = [...map.entries()].sort((a, b) => {
       const aFav = a[1].some((x) => x.favorite) ? 1 : 0;
@@ -1089,52 +1084,13 @@ export async function mountPhrasebook(root, ctx) {
 
     stat.textContent = `共 ${items.length} 条 · ${cats.length} 个分类`;
 
-    if (!filtered.length && !allCategoryNames().length) {
+    if (!filtered.length && !cats.length) {
       emptyState(emptyHost, p.empty || "暂无金句", p.emptyHint || "");
       return;
     }
 
-    const allCard = el(`
-      <div class="card phCatCard phCatCardAll" data-cat="">
-        ${items.length ? `<button type="button" class="phCatClearAll" title="清空整个金句库">×</button>` : ""}
-        <span class="phCatWatermark" aria-hidden="true">藏</span>
-        <div class="phCatHead">
-          <span class="phCatStamp phCatStampAll">总 览</span>
-          <span class="phCatStar" title="收藏数">${items.filter((x) => x.favorite).length} ★</span>
-        </div>
-        <div class="phCatTitle">全部分类</div>
-        <div class="phCatSample muted">浏览所有分类下的全部金句</div>
-        <div class="phCatFoot">
-          <span class="phCatNum">${items.length}</span>
-          <span class="phCatUnit muted">条金句</span>
-        </div>
-      </div>
-    `);
-    allCard.addEventListener("click", () => {
-      activeCategory = "__all__";
-      render();
-    });
-    const clearAllBtn = allCard.querySelector(".phCatClearAll");
-    if (clearAllBtn) {
-      clearAllBtn.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        const total = items.length;
-        if (!confirm(`【高风险】确定要清空整个金句库的全部 ${total} 条金句吗？\n建议先点「导出 JSON」备份一份。`)) return;
-        if (!confirm(`再次确认：将永久删除 ${total} 条金句。`)) return;
-        const snapshot = items.map((it) => ({ ...it }));
-        try {
-          for (const it of items) await idb.deletePhrase(it.id);
-          showUndo(snapshot, `已清空全部 ${total} 条金句`);
-          ctx.toast(`已清空 ${total} 条金句（15 秒内可撤销）`);
-          await reload();
-        } catch (err) {
-          ctx.toast(err?.message || "清空失败", true);
-        }
-      });
-    }
-    categoryGrid.appendChild(allCard);
-
     for (const [name, arr] of cats) {
+      if (!arr.length) continue;
       const pal = pickPalette(name);
       const titles = arr
         .slice(0, 8)
@@ -1318,14 +1274,16 @@ export async function mountPhrasebook(root, ctx) {
         .map((block, i) => {
           const idx = i + 1;
           return `
-            <li class="phBlock" data-idx="${idx}" style="position:relative;display:grid;grid-template-columns:32px 1fr auto;gap:12px;align-items:start;padding:12px 14px;border-radius:10px;background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.2);transition:background 120ms ease,border-color 120ms ease">
-              <div style="width:30px;height:30px;border-radius:50%;background:${pal.bg};border:1px solid ${pal.bd};color:#f8fafc;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center">${idx}</div>
-              <div class="phBlockText" style="font-size:1rem;line-height:1.85;white-space:pre-wrap;word-break:break-word;color:#e8edf5;user-select:text;cursor:text">${highlightHtml(block, keywords)}</div>
-              <div class="row" style="gap:4px;flex-wrap:wrap;justify-content:flex-end">
-                <button type="button" class="btn btn-ghost btn-sm phBlockCopy" title="复制这一句" style="font-size:11px;padding:4px 8px">复制</button>
-                <button type="button" class="btn btn-ghost btn-sm phBlockEdit" title="编辑这一句" style="font-size:11px;padding:4px 8px">编辑</button>
-                <button type="button" class="btn btn-ghost btn-sm phBlockSplit" title="另存为单独金句" style="font-size:11px;padding:4px 8px">拆出</button>
-                <button type="button" class="btn btn-ghost btn-sm phBlockDel" title="删除这一句" style="font-size:11px;padding:4px 8px;color:#fecaca;border-color:rgba(248,113,113,0.45)">删除</button>
+            <li class="phBlock" data-idx="${idx}">
+              <div class="phBlockMain">
+                <div class="phBlockIndex" style="background:${pal.bg};border-color:${pal.bd}">${idx}</div>
+                <div class="phBlockText">${highlightHtml(block, keywords)}</div>
+              </div>
+              <div class="phBlockActions">
+                <button type="button" class="btn btn-ghost btn-sm phBlockCopy" title="复制这一句">复制</button>
+                <button type="button" class="btn btn-ghost btn-sm phBlockEdit" title="编辑这一句">编辑</button>
+                <button type="button" class="btn btn-ghost btn-sm phBlockSplit" title="另存为单独金句">拆出</button>
+                <button type="button" class="btn btn-ghost btn-sm phBlockDel" title="删除这一句">删除</button>
               </div>
             </li>`;
         })
